@@ -67,22 +67,18 @@ header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-header("X-UA-Compatible: IE=IE8"); // Datepicker needs fixing
+header("X-UA-Compatible: IE=8"); // Datepicker needs fixing
 
 // set error reporting
-error_reporting(E_ALL & ~E_NOTICE);
-
-// check PHP version. ClipperCMS requires PHP 5.
-if(version_compare(phpversion(), '5') < 0) {
-    echo sprintf($_lang['php_version_check'], phpversion());
-    exit;
-}
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE);
 
 // set some runtime options
 $incPath = str_replace("\\","/",dirname(__FILE__)."/includes/"); // Mod by Raymond
 set_include_path(get_include_path() . PATH_SEPARATOR . $incPath);
 
-if (version_compare(phpversion(), "5.3") < 0) {
+// Suppress magic quotes
+// WARNING: This writes to the GPC arrays. Third party scripts may try to remove slashes a second time on servers with magic quotes 'on'.
+if (version_compare(phpversion(), "5.4") < 0) {
     @set_magic_quotes_runtime(0);
 
     // include_once the magic_quotes_gpc workaround
