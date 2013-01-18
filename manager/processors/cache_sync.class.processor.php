@@ -8,6 +8,19 @@ class synccache{
     var $aliases = array();
     var $parents = array();
 
+    //moved from document parser
+    var $config;
+    var $chunkCache;
+    var $snippetCache;
+    var $pluginCache;
+    var $contentTypes;
+    var $aliasListing;
+    var $documentListing;
+    var $documentMap;
+    var $pluginEvent;
+    
+    var $initialized = false;
+    
     function setCachepath($path) {
         $this->cachePath = $path;
     }
@@ -46,7 +59,65 @@ class synccache{
         }
         return $path;
     }
-
+    
+    /**
+     * Load everything, rebuild cache if necessary
+     */
+    function init() {
+        if(!$this->initialized){
+            if ($included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
+                $included= include_once (MODX_BASE_PATH . 'assets/cache/siteCache.idx.php');
+            }
+            if (!$included || !is_array($this->config) || empty ($this->config)) {
+                //setCachepath(MODX_BASE_PATH . "/assets/cache/");
+                //setReport(false);
+                $rebuilt = buildCache($this);
+                $included = false;
+                if($rebuilt && $included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
+                    $included= include MODX_BASE_PATH . 'assets/cache/siteCache.idx.php';
+                }
+            }
+            if(!$included)die('Could not initialize cache.');
+            $this->initialized = true;
+        }
+    }
+    
+    public function getConfig(){
+        return $this->config;
+    }
+    
+    public function getChunkCache(){
+        return $this->chunkCache;
+    }
+    
+    public function getSnippetCache(){
+        return $this->snippetCache;
+    }
+    
+    public function getPluginCache(){
+        return $this->pluginCache;
+    }   
+    
+    public function getContentType($documentIdentifier){
+        return $this->contentTypes[$documentIdentifier];
+    }   
+    
+    public function getAliasListing(){
+        return $this->aliasListing;
+    }   
+    
+    public function getDocumentListing(){
+        return $this->documentListing;
+    }   
+    
+    public function getDocumentMap(){
+        return $this->documentMap;
+    }   
+    
+    public function getPluginEvent(){
+        return $this->pluginEvent;
+    }   
+    
     function emptyCache($modx = null) {
         if((function_exists('is_a') && is_a($modx, 'DocumentParser') === false) || get_class($modx) !== 'DocumentParser') {
             $modx = $GLOBALS['modx'];

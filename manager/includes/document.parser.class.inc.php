@@ -37,7 +37,7 @@ class DocumentParser {
     var $dumpSnippets;
     var $chunkCache;    //cache object
     var $snippetCache;  //cache object
-    var $contentTypes;  //cache object
+    //var $contentTypes;  //cache object
     var $dumpSQL;
     var $queryCode;
     var $virtualDir;
@@ -75,9 +75,11 @@ class DocumentParser {
         @ ini_set("track_errors", "1"); // enable error tracking in $php_errormsg
         
         //load cache
-        // initiate a new cache
-        include_once(MODX_MANAGER_PATH.'/includes/cache/cache.class.inc.php');
-        $this->cache = new ClipperCache;
+        include_once MODX_BASE_PATH . "/manager/processors/cache_sync.class.processor.php";
+        $this->cache = new synccache();
+        $this->cache->setCachepath(MODX_BASE_PATH . "/assets/cache/");
+        $this->cache->setReport(false);
+        $this->cache->init();
     }
 
     /**
@@ -314,8 +316,17 @@ class DocumentParser {
      */
     function getSettings() {
         if (!is_array($this->config) || empty ($this->config)) {
-            $this->cache->loadSettings($this);
-
+            //read settings from cache
+            $this->config = $this->cache->getConfig();
+            //$this->contentTypes = $this->cache->getContentTypes();
+            $this->pluginEvent = $this->cache->getPluginEvent();
+            $this->pluginCache = $this->cache->getPluginCache();
+            $this->chunkCache = $this->cache->getChunkCache();
+            $this->snippetCache = $this->cache->getSnippetCache();
+            $this->aliasListing = $this->cache->getAliasListing();
+            $this->documentListing = $this->cache->getDocumentListing();
+            $this->documentMap = $this->cache->getDocumentMap();
+            
             if(!is_array($this->config) || empty ($this->config)) {
                 $result= $this->db->query('SELECT setting_name, setting_value FROM ' . $this->getFullTableName('system_settings'));
                 while ($row= $this->db->getRow($result, 'both')) {
@@ -640,7 +651,7 @@ class DocumentParser {
 
         // send out content-type and content-disposition headers
         if (IN_PARSER_MODE == "true") {
-            $type= !empty ($this->contentTypes[$this->documentIdentifier]) ? $this->contentTypes[$this->documentIdentifier] : "text/html";
+            $type = $this->cache->getContentType($this->documentIdentifier) != null ? $this->cache->getContentType($this->documentIdentifier) : "text/html";
             header('Content-Type: ' . $type . '; charset=' . $this->config['modx_charset']);
 //            if (($this->documentIdentifier == $this->config['error_page']) || $redirect_error)
 //                header('HTTP/1.0 404 Not Found');
