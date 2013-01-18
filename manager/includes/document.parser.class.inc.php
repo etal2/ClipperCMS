@@ -33,7 +33,7 @@ class DocumentParser {
     var $aliases;
     var $visitor;
     var $entrypage;
-    var $documentListing;   //cache object
+    //var $documentListing;   //cache object
     var $dumpSnippets;
     var $chunkCache;    //cache object
     var $snippetCache;  //cache object
@@ -74,7 +74,7 @@ class DocumentParser {
         // set track_errors ini variable
         @ ini_set("track_errors", "1"); // enable error tracking in $php_errormsg
         
-        //load cache
+        //initialize cache
         include_once MODX_BASE_PATH . "/manager/processors/cache_sync.class.processor.php";
         $this->cache = new synccache();
         $this->cache->setCachepath(MODX_BASE_PATH . "/assets/cache/");
@@ -324,7 +324,7 @@ class DocumentParser {
             $this->chunkCache = $this->cache->getChunkCache();
             $this->snippetCache = $this->cache->getSnippetCache();
             $this->aliasListing = $this->cache->getAliasListing();
-            $this->documentListing = $this->cache->getDocumentListing();
+            //$this->documentListing = $this->cache->getDocumentListing();
             $this->documentMap = $this->cache->getDocumentMap();
             
             if(!is_array($this->config) || empty ($this->config)) {
@@ -508,10 +508,10 @@ class DocumentParser {
         }
         $q= str_replace($this->config['friendly_url_prefix'], "", $q);
         $q= str_replace($this->config['friendly_url_suffix'], "", $q);
-        if (is_numeric($q) && !$this->documentListing[$q]) { /* we got an ID returned, check to make sure it's not an alias */
+        if (is_numeric($q) && !$this->cache->existsDocumentListing($q)) { /* we got an ID returned, check to make sure it's not an alias */
             /* FS#476 and FS#308: check that id is valid in terms of virtualDir structure */
             if ($this->config['use_alias_path'] == 1) {
-                if ((($this->virtualDir != '' && !$this->documentListing[$this->virtualDir . '/' . $q]) || ($this->virtualDir == '' && !$this->documentListing[$q])) && (($this->virtualDir != '' && in_array($q, $this->getChildIds($this->documentListing[$this->virtualDir], 1))) || ($this->virtualDir == '' && in_array($q, $this->getChildIds(0, 1))))) {
+                if ((($this->virtualDir != '' && !$this->cache->existsDocumentListing($this->virtualDir . '/' . $q)) || ($this->virtualDir == '' && !$this->cache->existsDocumentListing($q))) && (($this->virtualDir != '' && in_array($q, $this->getChildIds($this->cache->getDocumentListing($this->virtualDir), 1))) || ($this->virtualDir == '' && in_array($q, $this->getChildIds(0, 1))))) {
                     $this->documentMethod= 'id';
                     return $q;
                 } else { /* not a valid id in terms of virtualDir, treat as alias */
@@ -1171,9 +1171,9 @@ class DocumentParser {
             $identifier = $this->cleanDocumentIdentifier($identifier);
             $method = $this->documentMethod;
         }
-        if($method == 'alias' && $this->config['use_alias_path'] && array_key_exists($identifier, $this->documentListing)) {
+        if($method == 'alias' && $this->config['use_alias_path'] && $this->cache->existsDocumentListing($identifier)) {
             $method = 'id';
-            $identifier = $this->documentListing[$identifier];
+            $identifier = $this->cache->getDocumentListing($identifier);
         }
         // get document groups for current user
         if ($docgrp= $this->getUserDocGroups())
@@ -1363,13 +1363,13 @@ class DocumentParser {
             // Check use_alias_path and check if $this->virtualDir is set to anything, then parse the path
             if ($this->config['use_alias_path'] == 1) {
                 $alias= (strlen($this->virtualDir) > 0 ? $this->virtualDir . '/' : '') . $this->documentIdentifier;
-                if (array_key_exists($alias, $this->documentListing)) {
-                    $this->documentIdentifier= $this->documentListing[$alias];
+                if ($this->cache->existsDocumentListing($alias)) {
+                    $this->documentIdentifier= $this->cache->getDocumentListing($alias);
                 } else {
                     $this->sendErrorPage();
                 }
             } else {
-                $this->documentIdentifier= $this->documentListing[$this->documentIdentifier];
+                $this->documentIdentifier= $this->cache->getDocumentListing($this->documentIdentifier);
             }
             $this->documentMethod= 'id';
         }

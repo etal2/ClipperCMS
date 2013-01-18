@@ -106,9 +106,13 @@ class synccache{
         return $this->aliasListing;
     }   
     
-    public function getDocumentListing(){
-        return $this->documentListing;
-    }   
+    public function getDocumentListing($documentIdentifier){
+        return $this->documentListing[$documentIdentifier];
+    }
+    
+    public function existsDocumentListing($documentIdentifier){
+        return array_key_exists ($documentIdentifier, $this->documentListing);
+    }
     
     public function getDocumentMap(){
         return $this->documentMap;
