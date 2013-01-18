@@ -8,8 +8,8 @@
 class DocumentParser {
     var $db; // db object
     var $event, $Event; // event object
-    var $pluginEvent;
-    var $config= null;
+    var $pluginEvent;   //cache object
+    var $config= null;  //cache object
     var $rs;
     var $result;
     var $sql;
@@ -33,11 +33,11 @@ class DocumentParser {
     var $aliases;
     var $visitor;
     var $entrypage;
-    var $documentListing;
+    var $documentListing;   //cache object
     var $dumpSnippets;
-    var $chunkCache;
-    var $snippetCache;
-    var $contentTypes;
+    var $chunkCache;    //cache object
+    var $snippetCache;  //cache object
+    var $contentTypes;  //cache object
     var $dumpSQL;
     var $queryCode;
     var $virtualDir;
@@ -45,7 +45,7 @@ class DocumentParser {
     var $sjscripts;
     var $jscripts;
     var $loadedjscripts;
-    var $documentMap;
+    var $documentMap;   //cache object
     var $forwards= 3;
 
     /**
@@ -73,6 +73,11 @@ class DocumentParser {
         $this->pluginEvent= array ();
         // set track_errors ini variable
         @ ini_set("track_errors", "1"); // enable error tracking in $php_errormsg
+        
+        //load cache
+        // initiate a new cache
+        include_once(MODX_MANAGER_PATH.'/includes/cache/cache.class.inc.php');
+        $this->cache = new ClipperCache;
     }
 
     /**
@@ -309,27 +314,15 @@ class DocumentParser {
      */
     function getSettings() {
         if (!is_array($this->config) || empty ($this->config)) {
-            if ($included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
-                $included= include_once (MODX_BASE_PATH . 'assets/cache/siteCache.idx.php');
-            }
-            if (!$included || !is_array($this->config) || empty ($this->config)) {
-                include_once MODX_BASE_PATH . "/manager/processors/cache_sync.class.processor.php";
-                $cache = new synccache();
-                $cache->setCachepath(MODX_BASE_PATH . "/assets/cache/");
-                $cache->setReport(false);
-                $rebuilt = $cache->buildCache($this);
-                $included = false;
-                if($rebuilt && $included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
-                    $included= include MODX_BASE_PATH . 'assets/cache/siteCache.idx.php';
-                }
-                if(!$included) {
-                    $result= $this->db->query('SELECT setting_name, setting_value FROM ' . $this->getFullTableName('system_settings'));
-                    while ($row= $this->db->getRow($result, 'both')) {
-                        $this->config[$row[0]]= $row[1];
-                    }
-                }
-            }
+            $this->cache->loadSettings($this);
 
+            if(!is_array($this->config) || empty ($this->config)) {
+                $result= $this->db->query('SELECT setting_name, setting_value FROM ' . $this->getFullTableName('system_settings'));
+                while ($row= $this->db->getRow($result, 'both')) {
+                    $this->config[$row[0]]= $row[1];
+                }
+            }
+            
             // added for backwards compatibility - garry FS#104
             $this->config['etomite_charset'] = & $this->config['modx_charset'];
 
