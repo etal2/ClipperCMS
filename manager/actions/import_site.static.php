@@ -123,7 +123,7 @@ function importFiles($parent,$filepath,$files, &$tmpDocumentListing = array()) {
                 exit;
             }
             echo "<p class=\"success\">".$_lang["import_site_success"]."</p>";
-            importFiles($new_parent,$filepath."/$id/",$value);
+            importFiles($new_parent,$filepath."/$id/",$value,$tmpDocumentListing);
         }
         else {
             // create dcoument

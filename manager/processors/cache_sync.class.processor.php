@@ -8,16 +8,43 @@ class synccache{
     var $aliases = array();
     var $parents = array();
 
-    //moved from document parser
+    //variables moved from document parser:
+    /*
+     * Array of various config settings
+     */
     var $config;
     var $chunkCache;
     var $snippetCache;
     var $pluginCache;
-    var $contentTypes;
-    var $aliasListing;
-    var $documentListing;
-    var $documentMap;
     var $pluginEvent;
+    
+    /*
+     * Array of documents with non default content type (not text/html)
+     * Key is document id
+     * Value is content type
+     */
+    var $contentTypes;
+    
+    /*
+     * Array of all documents
+     * Key is document id
+     * Value is an array containing 'id', 'alias', 'path', 'parent'
+     */
+    var $aliasListing;
+    
+    /*
+     * Array of all documents
+     * Key is document url (changes depending on friendly url settings)
+     * Value is document id
+     */
+    var $documentListing;
+    
+    /*
+     * Array of all documents
+     * No Key
+     * Values are arrays of parentId => childId
+     */
+    var $documentMap;
     
     var $initialized = false;
     
@@ -69,7 +96,9 @@ class synccache{
                 $included= include_once (MODX_BASE_PATH . 'assets/cache/siteCache.idx.php');
             }
             if (!$included || !is_array($this->config) || empty ($this->config)) {
-                //setCachepath(MODX_BASE_PATH . "/assets/cache/");
+                if(!isset($this->cachePath)){
+                    setCachepath(MODX_BASE_PATH . "/assets/cache/");
+                }
                 //setReport(false);
                 $rebuilt = buildCache($this);
                 $included = false;
@@ -84,6 +113,10 @@ class synccache{
     
     public function getConfig(){
         return $this->config;
+    }
+    
+    public function getPluginEvent(){
+        return $this->pluginEvent;
     }
     
     public function getChunkCache(){
@@ -102,9 +135,13 @@ class synccache{
         return $this->contentTypes[$documentIdentifier];
     }   
     
-    public function getAliasListing(){
-        return $this->aliasListing;
-    }   
+    public function getAliasListing($documentIdentifier){
+        return $this->aliasListing[$documentIdentifier];
+    }
+    
+    public function existsAliasListing($documentIdentifier){
+        return array_key_exists ($documentIdentifier, $this->aliasListing);
+    }
     
     public function getDocumentListing($documentIdentifier){
         return $this->documentListing[$documentIdentifier];
@@ -116,11 +153,7 @@ class synccache{
     
     public function getDocumentMap(){
         return $this->documentMap;
-    }   
-    
-    public function getPluginEvent(){
-        return $this->pluginEvent;
-    }   
+    }
     
     function emptyCache($modx = null) {
         if((function_exists('is_a') && is_a($modx, 'DocumentParser') === false) || get_class($modx) !== 'DocumentParser') {

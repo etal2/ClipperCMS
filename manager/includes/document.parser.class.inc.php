@@ -30,14 +30,9 @@ class DocumentParser {
     var $queryTime;
     var $currentSnippet;
     var $documentName;
-    var $aliases;
     var $visitor;
     var $entrypage;
-    //var $documentListing;   //cache object
     var $dumpSnippets;
-    var $chunkCache;    //cache object
-    var $snippetCache;  //cache object
-    //var $contentTypes;  //cache object
     var $dumpSQL;
     var $queryCode;
     var $virtualDir;
@@ -45,9 +40,15 @@ class DocumentParser {
     var $sjscripts;
     var $jscripts;
     var $loadedjscripts;
-    var $documentMap;   //cache object
     var $forwards= 3;
-
+    
+    var $chunkCache;    //cache object
+    var $snippetCache;  //cache object
+    //var $contentTypes;  //cache object
+    //var $documentListing;   //cache object
+    var $documentMap;   //cache object
+    var $aliases; //not in use anymore
+    
     /**
      * @var array Map forked snippet names to names of earlier compatible snippets.
      * Note that keys are all lowercase.
@@ -323,7 +324,7 @@ class DocumentParser {
             $this->pluginCache = $this->cache->getPluginCache();
             $this->chunkCache = $this->cache->getChunkCache();
             $this->snippetCache = $this->cache->getSnippetCache();
-            $this->aliasListing = $this->cache->getAliasListing();
+            //$this->aliasListing = $this->cache->getAliasListing();
             //$this->documentListing = $this->cache->getDocumentListing();
             $this->documentMap = $this->cache->getDocumentMap();
             
@@ -1124,7 +1125,7 @@ class DocumentParser {
         unset($Alias);
         return ($dir != '' ? "$dir/" : '') . $pre . $alias . $suff;
     }
-
+    
     /** 
      * Convert URL tags [~...~] to URLs
      *
@@ -1133,26 +1134,32 @@ class DocumentParser {
      */
     function rewriteUrls($documentSource) {
         // rewrite the urls
+        $in= '!\[\~([0-9]+)\~\]!is';
         if ($this->config['friendly_urls'] == 1) {
-            $aliases= array ();
-            foreach ($this->aliasListing as $item) {
-                $aliases[$item['id']]= (strlen($item['path']) > 0 ? $item['path'] . '/' : '') . $item['alias'];
-            }
-            $in= '!\[\~([0-9]+)\~\]!ise'; // Use preg_replace with /e to make it evaluate PHP
-            $isfriendly= ($this->config['friendly_alias_urls'] == 1 ? 1 : 0);
-            $pref= $this->config['friendly_url_prefix'];
-            $suff= $this->config['friendly_url_suffix'];
-            $thealias= '$aliases[\\1]';
-            $found_friendlyurl= "\$this->makeFriendlyURL('$pref','$suff',$thealias)";
-            $not_found_friendlyurl= "\$this->makeFriendlyURL('$pref','$suff','" . '\\1' . "')";
-            $out= "({$isfriendly} && isset({$thealias}) ? {$found_friendlyurl} : {$not_found_friendlyurl})";
-            $documentSource= preg_replace($in, $out, $documentSource);
+            $documentSource= preg_replace_callback($in, array($this, 'friendlyUrlCallback'), $documentSource);
         } else {
-            $in= '!\[\~([0-9]+)\~\]!is';
             $out= "index.php?id=" . '\1';
             $documentSource= preg_replace($in, $out, $documentSource);
         }
         return $documentSource;
+    }
+    
+    /** 
+     * Helper function to convert a single [~...~] preg match to URL
+     * used by rewriteUrls
+     * @param array $match
+     * @return string
+     */
+    private function friendlyUrlCallback($match){
+        $id = $match[1];
+        if($this->cache->existsAliasListing($id) && $this->config['friendly_alias_urls'] == 1){
+            $item = $this->cache->getAliasListing($id);
+            $alias = (strlen($item['path']) > 0 ? $item['path'] . '/' : '') . $item['alias'];
+        } else {
+            $alias = $id;
+        }
+        
+        return $this->makeFriendlyURL($this->config['friendly_url_prefix'],$this->config['friendly_url_suffix'],$alias);
     }
 
     /**
@@ -1496,10 +1503,10 @@ class DocumentParser {
     function getParentIds($id, $height= 10) {
         $parents= array ();
         while ( $id && $height-- ) {
-            $thisid = $id;
-            $id = $this->aliasListing[$id]['parent'];
+            $al = $this->cache->getAliasListing($id);
+            $id = $al['parent'];
             if (!$id) break;
-            $pkey = strlen($this->aliasListing[$thisid]['path']) ? $this->aliasListing[$thisid]['path'] : $this->aliasListing[$id]['alias'];
+            $pkey = strlen($al['path']) ? $al['path'] : $this->cache->getAliasListing($id)['alias'];
             if (!strlen($pkey)) $pkey = "{$id}";
             $parents[$pkey] = $id;
         }
@@ -1531,7 +1538,8 @@ class DocumentParser {
             $depth--;
 
             foreach ($documentMap_cache[$id] as $childId) {
-                $pkey = (strlen($this->aliasListing[$childId]['path']) ? "{$this->aliasListing[$childId]['path']}/" : '') . $this->aliasListing[$childId]['alias'];
+                $al = $this->cache->getAliasListing($childId);
+                $pkey = (strlen($al['path']) ? "{$al['path']}/" : '') . $al['alias'];
                 if (!strlen($pkey)) $pkey = "{$childId}";
                     $children[$pkey] = $childId;
 
@@ -2006,7 +2014,7 @@ class DocumentParser {
         elseif ($this->config['friendly_urls'] == 1 && $alias == '') {
             $alias= $id;
             if ($this->config['friendly_alias_urls'] == 1) {
-                $al= $this->aliasListing[$id];
+                $al= $this->cache->getAliasListing($id);
                 $alPath= !empty ($al['path']) ? $al['path'] . '/' : '';
                 if ($al && $al['alias'])
                     $alias= $al['alias'];
