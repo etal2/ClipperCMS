@@ -321,7 +321,7 @@ class DocumentParser {
             $this->config = $this->cache->getConfig();
             //$this->contentTypes = $this->cache->getContentTypes();
             $this->pluginEvent = $this->cache->getPluginEvent();
-            $this->pluginCache = $this->cache->getPluginCache();
+            //$this->pluginCache = $this->cache->getPluginCache();
             //$this->chunkCache = $this->cache->getChunkCache();
             //$this->snippetCache = $this->cache->getSnippetCache();
             //$this->aliasListing = $this->cache->getAliasListing();
@@ -509,10 +509,10 @@ class DocumentParser {
         }
         $q= str_replace($this->config['friendly_url_prefix'], "", $q);
         $q= str_replace($this->config['friendly_url_suffix'], "", $q);
-        if (is_numeric($q) && !$this->cache->existsDocumentListing($q)) { /* we got an ID returned, check to make sure it's not an alias */
+        if (is_numeric($q) && !$this->cache->containsDocumentListing($q)) { /* we got an ID returned, check to make sure it's not an alias */
             /* FS#476 and FS#308: check that id is valid in terms of virtualDir structure */
             if ($this->config['use_alias_path'] == 1) {
-                if ((($this->virtualDir != '' && !$this->cache->existsDocumentListing($this->virtualDir . '/' . $q)) || ($this->virtualDir == '' && !$this->cache->existsDocumentListing($q))) && (($this->virtualDir != '' && in_array($q, $this->getChildIds($this->cache->getDocumentListing($this->virtualDir), 1))) || ($this->virtualDir == '' && in_array($q, $this->getChildIds(0, 1))))) {
+                if ((($this->virtualDir != '' && !$this->cache->containsDocumentListing($this->virtualDir . '/' . $q)) || ($this->virtualDir == '' && !$this->cache->containsDocumentListing($q))) && (($this->virtualDir != '' && in_array($q, $this->getChildIds($this->cache->getDocumentListing($this->virtualDir), 1))) || ($this->virtualDir == '' && in_array($q, $this->getChildIds(0, 1))))) {
                     $this->documentMethod= 'id';
                     return $q;
                 } else { /* not a valid id in terms of virtualDir, treat as alias */
@@ -562,7 +562,7 @@ class DocumentParser {
                                 break;
                             }
                     }
-                    // diplay error pages if user has no access to cached doc
+                    // display error pages if user has no access to cached doc
                     if (!$pass) {
                         if ($this->config['unauthorized_page']) {
                             // check if file is not public
@@ -1152,7 +1152,7 @@ class DocumentParser {
      */
     private function friendlyUrlCallback($match){
         $id = $match[1];
-        if($this->cache->existsAliasListing($id) && $this->config['friendly_alias_urls'] == 1){
+        if($this->cache->containsAliasListing($id) && $this->config['friendly_alias_urls'] == 1){
             $item = $this->cache->getAliasListing($id);
             $alias = (strlen($item['path']) > 0 ? $item['path'] . '/' : '') . $item['alias'];
         } else {
@@ -1178,7 +1178,7 @@ class DocumentParser {
             $identifier = $this->cleanDocumentIdentifier($identifier);
             $method = $this->documentMethod;
         }
-        if($method == 'alias' && $this->config['use_alias_path'] && $this->cache->existsDocumentListing($identifier)) {
+        if($method == 'alias' && $this->config['use_alias_path'] && $this->cache->containsDocumentListing($identifier)) {
             $method = 'id';
             $identifier = $this->cache->getDocumentListing($identifier);
         }
@@ -1370,7 +1370,7 @@ class DocumentParser {
             // Check use_alias_path and check if $this->virtualDir is set to anything, then parse the path
             if ($this->config['use_alias_path'] == 1) {
                 $alias= (strlen($this->virtualDir) > 0 ? $this->virtualDir . '/' : '') . $this->documentIdentifier;
-                if ($this->cache->existsDocumentListing($alias)) {
+                if ($this->cache->containsDocumentListing($alias)) {
                     $this->documentIdentifier= $this->cache->getDocumentListing($alias);
                 } else {
                     $this->sendErrorPage();
@@ -3271,18 +3271,21 @@ class DocumentParser {
                 $e->activePlugin= $pluginName;
 
                 // get plugin code
-                if (isset ($this->pluginCache[$pluginName])) {
-                    $pluginCode= $this->pluginCache[$pluginName];
-                    $pluginProperties= $this->pluginCache[$pluginName . "Props"];
+                if ($this->cache->containsPlugin($pluginName)) {
+                    $pluginCode= $this->cache->getPlugin($pluginName);
+                    $pluginProperties= $this->cache->getPlugin($pluginName . "Props");
                 } else {
                     $sql= "SELECT `name`, `plugincode`, `properties` FROM " . $this->getFullTableName("site_plugins") . " WHERE `name`='" . $pluginName . "' AND `disabled`=0;";
                     $result= $this->db->query($sql);
                     if ($this->db->getRecordCount($result) == 1) {
                         $row= $this->db->getRow($result);
-                        $pluginCode= $this->pluginCache[$row['name']]= $row['plugincode'];
-                        $pluginProperties= $this->pluginCache[$row['name'] . "Props"]= $row['properties'];
+                        $pluginCode= $row['plugincode'];
+                        $pluginProperties= $row['properties'];
+                        $this->cache->setPlugin($row['name'], $pluginCode);
+                        $this->cache->setPlugin($row['name'] . "Props", $pluginProperties);
                     } else {
-                        $pluginCode= $this->pluginCache[$pluginName]= "return false;";
+                        $pluginCode= "return false;";
+                        $this->cache->setPlugin($pluginName, $pluginCode);
                         $pluginProperties= '';
                     }
                 }

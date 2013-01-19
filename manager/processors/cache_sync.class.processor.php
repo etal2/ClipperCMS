@@ -143,9 +143,17 @@ class synccache{
         return array_key_exists ($snippetname, $this->snippetCache);
     }
     
-    public function getPluginCache(){
-        return $this->pluginCache;
-    }   
+    public function getPlugin($pluginname){
+        return $this->pluginCache[$pluginname];
+    }
+    
+    public function setPlugin($pluginname, $pluginvalue){
+        return $this->pluginCache[$pluginname] = $pluginvalue;
+    }
+    
+    public function containsPlugin($pluginname){
+        return array_key_exists ($pluginname, $this->pluginCache);
+    }
     
     public function getContentType($documentIdentifier){
         return $this->contentTypes[$documentIdentifier];
