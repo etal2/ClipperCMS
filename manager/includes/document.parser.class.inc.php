@@ -1569,7 +1569,7 @@ class DocumentParser {
                 $children += $childrenIds;
                 if ($depth) {
                     foreach ($childrenIds as $childId) {
-                        $children += $this->getChildren($childId, $depth);
+                        $children += $this->getChildrenIds($childId, $depth);
                     }
                 }
             }
