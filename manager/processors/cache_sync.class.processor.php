@@ -115,7 +115,7 @@ class synccache{
         return $this->config;
     }
     
-    public function getPluginEvent(){
+    public function getPluginEvents(){
         return $this->pluginEvent;
     }
     

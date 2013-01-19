@@ -77,10 +77,10 @@ class DocumentParser {
         
         //initialize cache
         include_once MODX_BASE_PATH . "/manager/processors/cache_sync.class.processor.php";
-        $this->cache = new synccache();
-        $this->cache->setCachepath(MODX_BASE_PATH . "/assets/cache/");
-        $this->cache->setReport(false);
-        $this->cache->init();
+        $this->cacheManager = new synccache();
+        $this->cacheManager->setCachepath(MODX_BASE_PATH . "/assets/cache/");
+        $this->cacheManager->setReport(false);
+        $this->cacheManager->init();
     }
 
     /**
@@ -318,15 +318,15 @@ class DocumentParser {
     function getSettings() {
         if (!is_array($this->config) || empty ($this->config)) {
             //read settings from cache
-            $this->config = $this->cache->getConfig();
-            //$this->contentTypes = $this->cache->getContentTypes();
-            $this->pluginEvent = $this->cache->getPluginEvent();
-            //$this->pluginCache = $this->cache->getPluginCache();
-            //$this->chunkCache = $this->cache->getChunkCache();
-            //$this->snippetCache = $this->cache->getSnippetCache();
-            //$this->aliasListing = $this->cache->getAliasListing();
-            //$this->documentListing = $this->cache->getDocumentListing();
-            $this->documentMap = $this->cache->getDocumentMap();
+            $this->config = $this->cacheManager->getConfig();
+            $this->pluginEvent = $this->cacheManager->getPluginEvents();
+            //$this->contentTypes = $this->cacheManager->getContentTypes();
+            //$this->pluginCache = $this->cacheManager->getPluginCache();
+            //$this->chunkCache = $this->cacheManager->getChunkCache();
+            //$this->snippetCache = $this->cacheManager->getSnippetCache();
+            //$this->aliasListing = $this->cacheManager->getAliasListing();
+            //$this->documentListing = $this->cacheManager->getDocumentListing();
+            $this->documentMap = $this->cacheManager->getDocumentMap();
             
             if(!is_array($this->config) || empty ($this->config)) {
                 $result= $this->db->query('SELECT setting_name, setting_value FROM ' . $this->getFullTableName('system_settings'));
@@ -509,10 +509,10 @@ class DocumentParser {
         }
         $q= str_replace($this->config['friendly_url_prefix'], "", $q);
         $q= str_replace($this->config['friendly_url_suffix'], "", $q);
-        if (is_numeric($q) && !$this->cache->containsDocumentListing($q)) { /* we got an ID returned, check to make sure it's not an alias */
+        if (is_numeric($q) && !$this->cacheManager->containsDocumentListing($q)) { /* we got an ID returned, check to make sure it's not an alias */
             /* FS#476 and FS#308: check that id is valid in terms of virtualDir structure */
             if ($this->config['use_alias_path'] == 1) {
-                if ((($this->virtualDir != '' && !$this->cache->containsDocumentListing($this->virtualDir . '/' . $q)) || ($this->virtualDir == '' && !$this->cache->containsDocumentListing($q))) && (($this->virtualDir != '' && in_array($q, $this->getChildIds($this->cache->getDocumentListing($this->virtualDir), 1))) || ($this->virtualDir == '' && in_array($q, $this->getChildIds(0, 1))))) {
+                if ((($this->virtualDir != '' && !$this->cacheManager->containsDocumentListing($this->virtualDir . '/' . $q)) || ($this->virtualDir == '' && !$this->cacheManager->containsDocumentListing($q))) && (($this->virtualDir != '' && in_array($q, $this->getChildIds($this->cacheManager->getDocumentListing($this->virtualDir), 1))) || ($this->virtualDir == '' && in_array($q, $this->getChildIds(0, 1))))) {
                     $this->documentMethod= 'id';
                     return $q;
                 } else { /* not a valid id in terms of virtualDir, treat as alias */
@@ -652,7 +652,7 @@ class DocumentParser {
 
         // send out content-type and content-disposition headers
         if (IN_PARSER_MODE == "true") {
-            $type = $this->cache->getContentType($this->documentIdentifier) != null ? $this->cache->getContentType($this->documentIdentifier) : "text/html";
+            $type = $this->cacheManager->getContentType($this->documentIdentifier) != null ? $this->cacheManager->getContentType($this->documentIdentifier) : "text/html";
             header('Content-Type: ' . $type . '; charset=' . $this->config['modx_charset']);
 //            if (($this->documentIdentifier == $this->config['error_page']) || $redirect_error)
 //                header('HTTP/1.0 404 Not Found');
@@ -910,18 +910,18 @@ class DocumentParser {
         if (preg_match_all('~{{(.*?)}}~', $content, $matches)) {
             $settingsCount= count($matches[1]);
             for ($i= 0; $i < $settingsCount; $i++) {
-                if (!$this->cache->containsChunk($matches[1][$i])) {
+                if (!$this->cacheManager->containsChunk($matches[1][$i])) {
                     $sql= "SELECT `snippet` FROM " . $this->getFullTableName("site_htmlsnippets") . " WHERE " . $this->getFullTableName("site_htmlsnippets") . ".`name`='" . $this->db->escape($matches[1][$i]) . "';";
                     $result= $this->db->query($sql);
                     $limit= $this->db->getRecordCount($result);
                     if ($limit < 1) {
-                        $this->cache->setChunk($matches[1][$i],"");
+                        $this->cacheManager->setChunk($matches[1][$i],"");
                     } else {
                         $row= $this->db->getRow($result);
-                        $this->cache->setChunk($matches[1][$i],$row['snippet']);
+                        $this->cacheManager->setChunk($matches[1][$i],$row['snippet']);
                     }
                 }
-                $replace[$i]= $this->cache->getChunk($matches[1][$i]);
+                $replace[$i]= $this->cacheManager->getChunk($matches[1][$i]);
             }
             $content= str_replace($matches[0], $replace, $content);
         }
@@ -1026,13 +1026,13 @@ class DocumentParser {
             }
             $nrSnippetsToGet= $matchCount;
             for ($i= 0; $i < $nrSnippetsToGet; $i++) { // Raymond: Mod for Snippet props
-                if ($this->cache->containsSnippet($matches[1][$i])) {
+                if ($this->cacheManager->containsSnippet($matches[1][$i])) {
                     $snippets[$i]['name']= $matches[1][$i];
-                    $snippets[$i]['snippet']= $this->cache->getSnippet($matches[1][$i]);
-                    if ($this->cache->containsSnippet($matches[1][$i] . "Props"))
-                        $snippets[$i]['properties']= $this->cache->getSnippet($matches[1][$i] . "Props");
+                    $snippets[$i]['snippet']= $this->cacheManager->getSnippet($matches[1][$i]);
+                    if ($this->cacheManager->containsSnippet($matches[1][$i] . "Props"))
+                        $snippets[$i]['properties']= $this->cacheManager->getSnippet($matches[1][$i] . "Props");
                 } else {
-                    // get from db and store a copy inside cache
+                    // get from db and store a copy inside cacheManager
                     $sql= "SELECT `name`, `snippet`, `properties` FROM " . $this->getFullTableName("site_snippets") . " WHERE " . $this->getFullTableName("site_snippets") . ".`name`='" . $this->db->escape($matches[1][$i]) . "';";
                     $result= $this->db->query($sql);
                     $added = false;
@@ -1042,8 +1042,8 @@ class DocumentParser {
                             $snippets[$i]['name']= $row['name'];
                             $snippets[$i]['snippet']= $row['snippet'];
                             $snippets[$i]['properties']= $row['properties'];
-                            $this->cache->setSnippet($row['name'],$row['snippet']);
-                            $this->cache->setSnippet($row['name'] . "Props",$row['properties']);
+                            $this->cacheManager->setSnippet($row['name'],$row['snippet']);
+                            $this->cacheManager->setSnippet($row['name'] . "Props",$row['properties']);
                             $added = true;
                         }
                     }
@@ -1051,7 +1051,7 @@ class DocumentParser {
                         $snippets[$i]['name']= $matches[1][$i];
                         $snippets[$i]['snippet']= "return false;";
                         $snippets[$i]['properties']= '';
-                        $this->cache->setSnippet($matches[1][$i],"return false;");
+                        $this->cacheManager->setSnippet($matches[1][$i],"return false;");
                     }
                 }
             }
@@ -1152,8 +1152,8 @@ class DocumentParser {
      */
     private function friendlyUrlCallback($match){
         $id = $match[1];
-        if($this->cache->containsAliasListing($id) && $this->config['friendly_alias_urls'] == 1){
-            $item = $this->cache->getAliasListing($id);
+        if($this->cacheManager->containsAliasListing($id) && $this->config['friendly_alias_urls'] == 1){
+            $item = $this->cacheManager->getAliasListing($id);
             $alias = (strlen($item['path']) > 0 ? $item['path'] . '/' : '') . $item['alias'];
         } else {
             $alias = $id;
@@ -1178,9 +1178,9 @@ class DocumentParser {
             $identifier = $this->cleanDocumentIdentifier($identifier);
             $method = $this->documentMethod;
         }
-        if($method == 'alias' && $this->config['use_alias_path'] && $this->cache->containsDocumentListing($identifier)) {
+        if($method == 'alias' && $this->config['use_alias_path'] && $this->cacheManager->containsDocumentListing($identifier)) {
             $method = 'id';
-            $identifier = $this->cache->getDocumentListing($identifier);
+            $identifier = $this->cacheManager->getDocumentListing($identifier);
         }
         // get document groups for current user
         if ($docgrp= $this->getUserDocGroups())
@@ -1370,13 +1370,13 @@ class DocumentParser {
             // Check use_alias_path and check if $this->virtualDir is set to anything, then parse the path
             if ($this->config['use_alias_path'] == 1) {
                 $alias= (strlen($this->virtualDir) > 0 ? $this->virtualDir . '/' : '') . $this->documentIdentifier;
-                if ($this->cache->containsDocumentListing($alias)) {
-                    $this->documentIdentifier= $this->cache->getDocumentListing($alias);
+                if ($this->cacheManager->containsDocumentListing($alias)) {
+                    $this->documentIdentifier= $this->cacheManager->getDocumentListing($alias);
                 } else {
                     $this->sendErrorPage();
                 }
             } else {
-                $this->documentIdentifier= $this->cache->getDocumentListing($this->documentIdentifier);
+                $this->documentIdentifier= $this->cacheManager->getDocumentListing($this->documentIdentifier);
             }
             $this->documentMethod= 'id';
         }
@@ -1503,10 +1503,10 @@ class DocumentParser {
     function getParentIds($id, $height= 10) {
         $parents= array ();
         while ( $id && $height-- ) {
-            $al = $this->cache->getAliasListing($id);
+            $al = $this->cacheManager->getAliasListing($id);
             $id = $al['parent'];
             if (!$id) break;
-            $pkey = strlen($al['path']) ? $al['path'] : $this->cache->getAliasListing($id)['alias'];
+            $pkey = strlen($al['path']) ? $al['path'] : $this->cacheManager->getAliasListing($id)['alias'];
             if (!strlen($pkey)) $pkey = "{$id}";
             $parents[$pkey] = $id;
         }
@@ -1538,7 +1538,7 @@ class DocumentParser {
             $depth--;
 
             foreach ($documentMap_cache[$id] as $childId) {
-                $al = $this->cache->getAliasListing($childId);
+                $al = $this->cacheManager->getAliasListing($childId);
                 $pkey = (strlen($al['path']) ? "{$al['path']}/" : '') . $al['alias'];
                 if (!strlen($pkey)) $pkey = "{$childId}";
                     $children[$pkey] = $childId;
@@ -2014,7 +2014,7 @@ class DocumentParser {
         elseif ($this->config['friendly_urls'] == 1 && $alias == '') {
             $alias= $id;
             if ($this->config['friendly_alias_urls'] == 1) {
-                $al= $this->cache->getAliasListing($id);
+                $al= $this->cacheManager->getAliasListing($id);
                 $alPath= !empty ($al['path']) ? $al['path'] . '/' : '';
                 if ($al && $al['alias'])
                     $alias= $al['alias'];
@@ -2208,9 +2208,9 @@ class DocumentParser {
              $snippetName = $this->snippetMap[strtolower($snippetName)];
         }
 
-        if ($this->cache->containsSnippet($snippetName)) {
-            $snippet= $this->cache->getSnippet($snippetName);
-            $properties= $this->cache->getSnippet($snippetName . "Props");
+        if ($this->cacheManager->containsSnippet($snippetName)) {
+            $snippet= $this->cacheManager->getSnippet($snippetName);
+            $properties= $this->cacheManager->getSnippet($snippetName . "Props");
         } else { // not in cache so let's check the db
             $sql= "SELECT `name`, `snippet`, `properties` FROM " . $this->getFullTableName("site_snippets") . " WHERE " . $this->getFullTableName("site_snippets") . ".`name`='" . $this->db->escape($snippetName) . "';";
             $result= $this->db->query($sql);
@@ -2218,11 +2218,11 @@ class DocumentParser {
                 $row= $this->db->getRow($result);
                 $snippet= $row['snippet'];
                 $properties= $row['properties'];
-                $this->cache->setSnippet($row['name'], $row['snippet']);
-                $this->cache->setSnippet($row['name'] . "Props", $row['properties']);
+                $this->cacheManager->setSnippet($row['name'], $row['snippet']);
+                $this->cacheManager->setSnippet($row['name'] . "Props", $row['properties']);
             } else {
                 $snippet= "return false;";
-                $this->cache->setSnippet($snippetName, $snippet);
+                $this->cacheManager->setSnippet($snippetName, $snippet);
                 $properties= '';
             }
         }
@@ -2240,7 +2240,7 @@ class DocumentParser {
      * @return boolean|string
      */
    function getChunk($chunkName) {
-        $t= $this->cache->getChunk($chunkName);
+        $t= $this->cacheManager->getChunk($chunkName);
         return $t;
     }
 
@@ -3271,9 +3271,9 @@ class DocumentParser {
                 $e->activePlugin= $pluginName;
 
                 // get plugin code
-                if ($this->cache->containsPlugin($pluginName)) {
-                    $pluginCode= $this->cache->getPlugin($pluginName);
-                    $pluginProperties= $this->cache->getPlugin($pluginName . "Props");
+                if ($this->cacheManager->containsPlugin($pluginName)) {
+                    $pluginCode= $this->cacheManager->getPlugin($pluginName);
+                    $pluginProperties= $this->cacheManager->getPlugin($pluginName . "Props");
                 } else {
                     $sql= "SELECT `name`, `plugincode`, `properties` FROM " . $this->getFullTableName("site_plugins") . " WHERE `name`='" . $pluginName . "' AND `disabled`=0;";
                     $result= $this->db->query($sql);
@@ -3281,11 +3281,11 @@ class DocumentParser {
                         $row= $this->db->getRow($result);
                         $pluginCode= $row['plugincode'];
                         $pluginProperties= $row['properties'];
-                        $this->cache->setPlugin($row['name'], $pluginCode);
-                        $this->cache->setPlugin($row['name'] . "Props", $pluginProperties);
+                        $this->cacheManager->setPlugin($row['name'], $pluginCode);
+                        $this->cacheManager->setPlugin($row['name'] . "Props", $pluginProperties);
                     } else {
                         $pluginCode= "return false;";
-                        $this->cache->setPlugin($pluginName, $pluginCode);
+                        $this->cacheManager->setPlugin($pluginName, $pluginCode);
                         $pluginProperties= '';
                     }
                 }

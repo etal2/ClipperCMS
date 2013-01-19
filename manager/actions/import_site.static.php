@@ -110,7 +110,7 @@ function importFiles($parent,$filepath,$files, &$tmpDocumentListing = array()) {
     foreach($files as $id => $value){
         if(is_array($value)) {
             // create folder
-            $alias = (!isset($tmpDocumentListing[$alias]) && !$modx->cache->existsDocumentListing($id)) ? $id:$id.'-'.substr(uniqid(''),-3);
+            $alias = (!isset($tmpDocumentListing[$alias]) && !$modx->cacheManager->existsDocumentListing($id)) ? $id:$id.'-'.substr(uniqid(''),-3);
             $tmpDocumentListing[$alias] = true;
             printf("<p>".$_lang['import_site_importing_document']."</p>", $id);
             $sql = "INSERT INTO $dbase.`".$table_prefix."site_content`
@@ -126,13 +126,13 @@ function importFiles($parent,$filepath,$files, &$tmpDocumentListing = array()) {
             importFiles($new_parent,$filepath."/$id/",$value,$tmpDocumentListing);
         }
         else {
-            // create dcoument
+            // create document
             $filename = $value;
             $fparts = explode(".",$value);
             $value = $fparts[0];
             $ext = (count($fparts)>1)? $fparts[count($fparts)-1]:"";
             printf("<p>".$_lang['import_site_importing_document']."</p>", $filename);
-            $alias = (!isset($tmpDocumentListing[$alias]) && !$modx->cache->existsDocumentListing($value)) ? $value:$value.'-'.substr(uniqid(''),-3);
+            $alias = (!isset($tmpDocumentListing[$alias]) && !$modx->cacheManager->existsDocumentListing($value)) ? $value:$value.'-'.substr(uniqid(''),-3);
             $tmpDocumentListing[$alias] = true;
             if(!in_array($ext,$allowedfiles)) echo "<p class=\"success\">".$_lang["import_site_skip"]."</p>";
             else {
