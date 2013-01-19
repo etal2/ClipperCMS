@@ -800,51 +800,23 @@ class AjaxSearchResults {
             }
             return $unset;
     }
+    
     /*
     *  Get the Ids ready to be processed
     */
     function _getChildIds($Ids, $depth) {
         global $modx;
+        
         $depth = intval($depth);
-        $kids = array();
-        $docIds = array();
-        if ($depth == 0 && $Ids[0] == 0 && count($Ids) == 1) {
-            foreach ($modx->documentMap as $null => $document) {
-                foreach ($document as $parent => $id) {
-                    $kids[] = $id;
-                }
-            }
-            return $kids;
-        } else if ($depth == 0) {
-            $depth = 10000;
+        $intIDs = array();
 
-
-        }
-        foreach ($modx->documentMap as $null => $document) {
-            foreach ($document as $parent => $id) {
-                $kids[$parent][] = $id;
-            }
-        }
         foreach ($Ids AS $seed) {
-            if (!empty($kids[intval($seed) ])) {
-                $docIds = array_merge($docIds, $kids[intval($seed) ]);
-                unset($kids[intval($seed) ]);
-            }
+            $intIDs[] = intval($seed);
         }
-        $depth--;
-        while ($depth != 0) {
-            $valid = $docIds;
-            foreach ($docIds as $child => $id) {
-                if (!empty($kids[intval($id) ])) {
-                    $docIds = array_merge($docIds, $kids[intval($id) ]);
-                    unset($kids[intval($id) ]);
-                }
-            }
-            $depth--;
-            if ($valid == $docIds) $depth = 0;
-        }
-        return array_unique($docIds);
+
+        return $modx->getChildrenIds($intIDs, $depth);
     }
+    
     /*
     *  Clean Ids list of unwanted characters
     */

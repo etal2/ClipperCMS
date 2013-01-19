@@ -46,6 +46,13 @@ class synccache{
      */
     var $documentMap;
     
+    /*
+     * Array of all documents
+     * Key is document id
+     * Values are arrays of direct child ids
+     */
+    var $childMap;
+    
     var $initialized = false;
     
     function setCachepath($path) {
@@ -90,7 +97,7 @@ class synccache{
     /**
      * Load everything, rebuild cache if necessary
      */
-    function init() {
+    function init($modx) {
         if(!$this->initialized){
             if ($included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
                 $included= include_once (MODX_BASE_PATH . 'assets/cache/siteCache.idx.php');
@@ -100,7 +107,7 @@ class synccache{
                     setCachepath(MODX_BASE_PATH . "/assets/cache/");
                 }
                 //setReport(false);
-                $rebuilt = buildCache($this);
+                $rebuilt = $this->buildCache($modx);
                 $included = false;
                 if($rebuilt && $included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
                     $included= include MODX_BASE_PATH . 'assets/cache/siteCache.idx.php';
@@ -173,6 +180,10 @@ class synccache{
     
     public function containsDocumentListing($documentIdentifier){
         return array_key_exists ($documentIdentifier, $this->documentListing);
+    }
+    
+    public function getChildren($documentIdentifier){
+        return $this->childMap[$documentIdentifier];
     }
     
     public function getDocumentMap(){
@@ -326,6 +337,7 @@ class synccache{
         $tmpPHP .= '$a = &$this->aliasListing;' . "\n";
         $tmpPHP .= '$d = &$this->documentListing;' . "\n";
         $tmpPHP .= '$m = &$this->documentMap;' . "\n";
+        $tmpPHP .= '$x = &$this->childMap;' . "\n";
         $sql = 'SELECT IF(alias=\'\', id, alias) AS alias, id, contentType, parent FROM '.$modx->getFullTableName('site_content').' WHERE deleted=0 ORDER BY parent, menuindex';
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
@@ -342,6 +354,7 @@ class synccache{
             }
             $tmpPHP .= '$a[' . $tmp1['id'] . ']'." = array('id' => ".$tmp1['id'].", 'alias' => '".$modx->db->escape($tmp1['alias'])."', 'path' => '" . $modx->db->escape($tmpPath)."', 'parent' => " . $tmp1['parent']. ");\n";
             $tmpPHP .= '$m[]'." = array('".$tmp1['parent']."' => '".$tmp1['id']."');\n";
+            $tmpPHP .= '$x[' . $tmp1['parent'] . '][]='.$tmp1['id'].";\n";
         }
 
 

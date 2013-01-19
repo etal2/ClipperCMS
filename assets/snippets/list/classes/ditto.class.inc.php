@@ -629,14 +629,9 @@ class ditto {
 			$recordCount = count($resource);
 				// count number of records
 
-			if (!$seeThruUnpub) {
-				$parentList = $this->getParentList();
-					// get parent list
-			}
 			for ($i = 0; $i < $recordCount; $i++) {
 				if (!$seeThruUnpub) {
-					$published = $parentList[$resource[$i]["parent"]];
-					if ($published == "0")
+					if (!$this->isPublished($resource[$i]["parent"]))
 						unset ($resource[$i]);
 				}
 				if (count($customReset) > 0) {
@@ -727,28 +722,18 @@ class ditto {
 	
 	
 	// ---------------------------------------------------
-	// Function: getParentList
-	// Get a list of all available parents
+	// Function: isPublished
+	// Check if document is published
 	// ---------------------------------------------------
-		
-	private function getParentList() {
+        
+	private function isPublished($docid) {
 		global $modx;
-		$kids = array();
-		foreach ($modx->documentMap as $null => $document) {
-			foreach ($document as $parent => $id) {
-				$kids[$parent][] = $id;
-			}
-		}
-		$parents = array();
-		foreach ($kids as $item => $value) {
-			if ($item != 0) {
-				$pInfo = $modx->getPageInfo($item,0,"published");
-			} else {
-				$pInfo["published"] = "1";
-			}
-			$parents[$item] = $pInfo["published"];
-		}
-		return $parents;
+		static $published = array();
+		if(!isset($published[$docid])){
+                    $pInfo = $modx->getPageInfo($docid,0,"published");
+                    $published[$docid] = $pInfo["published"] == "1";
+                }
+		return $published[$docid];
 	}
 
 	// ---------------------------------------------------
@@ -840,54 +825,18 @@ class ditto {
 	// ---------------------------------------------------
 	// Function: getChildIDs
 	// Get the IDs ready to be processed
-	// Similar to the modx version by the same name but much faster
 	// ---------------------------------------------------
 
 	private function getChildIDs($IDs, $depth) {
-		global $modx;
-		$depth = intval($depth);
-		$kids = array();
-		$docIDs = array();
-		
-		if ($depth == 0 && $IDs[0] == 0 && count($IDs) == 1) {
-			foreach ($modx->documentMap as $null => $document) {
-				foreach ($document as $parent => $id) {
-					$kids[] = $id;
-				}
-			}
-			return $kids;
-		} else if ($depth == 0) {
-			$depth = 10000;
-				// Impliment unlimited depth...
-		}
-		
-		foreach ($modx->documentMap as $null => $document) {
-			foreach ($document as $parent => $id) {
-				$kids[$parent][] = $id;
-			}
-		}
+            global $modx;
+            $depth = intval($depth);
+            $intIDs = array();
 
-		foreach ($IDs AS $seed) {
-			if (!empty($kids[intval($seed)])) {
-				$docIDs = array_merge($docIDs,$kids[intval($seed)]);
-				unset($kids[intval($seed)]);
-			}
-		}
-		$depth--;
+            foreach ($IDs AS $seed) {
+                $intIDs[] = intval($seed);
+            }
 
-		while($depth != 0) {
-			$valid = $docIDs;
-			foreach ($docIDs as $child=>$id) {
-				if (!empty($kids[intval($id)])) {
-					$docIDs = array_merge($docIDs,$kids[intval($id)]);
-					unset($kids[intval($id)]);
-				}
-			}
-			$depth--;
-			if ($valid == $docIDs) $depth = 0;
-		}
-
-		return array_unique($docIDs);
+            return $modx->getChildrenIds($intIDs, $depth);
 	}
 
 	// ---------------------------------------------------
@@ -979,7 +928,7 @@ class ditto {
 	// ---------------------------------------------------
 	
 	private function getDocumentsIDs($ids= array (), $published= 1) {
-		global $modx;
+            global $modx;
 	    if (count($ids) == 0) {
 	        return false;
 	    } else {

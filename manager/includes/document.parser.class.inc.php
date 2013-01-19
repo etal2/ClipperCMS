@@ -46,7 +46,7 @@ class DocumentParser {
     //var $snippetCache;  //cache object
     //var $contentTypes;  //cache object
     //var $documentListing;   //cache object
-    var $documentMap;   //cache object
+    //var $documentMap;   //cache object
     //var $aliases; //not in use anymore
     
     /**
@@ -75,12 +75,11 @@ class DocumentParser {
         // set track_errors ini variable
         @ ini_set("track_errors", "1"); // enable error tracking in $php_errormsg
         
-        //initialize cache
+        //load cache object
         include_once MODX_BASE_PATH . "/manager/processors/cache_sync.class.processor.php";
         $this->cacheManager = new synccache();
         $this->cacheManager->setCachepath(MODX_BASE_PATH . "/assets/cache/");
         $this->cacheManager->setReport(false);
-        $this->cacheManager->init();
     }
 
     /**
@@ -317,6 +316,8 @@ class DocumentParser {
      */
     function getSettings() {
         if (!is_array($this->config) || empty ($this->config)) {
+             //initialize cache manager
+            $this->cacheManager->init($this);
             //read settings from cache
             $this->config = $this->cacheManager->getConfig();
             $this->pluginEvent = $this->cacheManager->getPluginEvents();
@@ -326,7 +327,7 @@ class DocumentParser {
             //$this->snippetCache = $this->cacheManager->getSnippetCache();
             //$this->aliasListing = $this->cacheManager->getAliasListing();
             //$this->documentListing = $this->cacheManager->getDocumentListing();
-            $this->documentMap = $this->cacheManager->getDocumentMap();
+            //$this->documentMap = $this->cacheManager->getDocumentMap();
             
             if(!is_array($this->config) || empty ($this->config)) {
                 $result= $this->db->query('SELECT setting_name, setting_value FROM ' . $this->getFullTableName('system_settings'));
@@ -1514,7 +1515,7 @@ class DocumentParser {
     }
 
     /**
-     * Returns an array of child IDs belonging to the specified parent.
+     * Returns an array of child IDs (and their aliases) belonging to the specified parent.
      *
      * @param int $id The parent resource/document to start from
      * @param int $depth How many levels deep to search for children, default: 10
@@ -1522,35 +1523,74 @@ class DocumentParser {
      * @return array Contains the document Listing (tree) like the sitemap
      */
     function getChildIds($id, $depth= 10, $children= array ()) {
-
-        // Initialise a static array to index parents->children
-        static $documentMap_cache = array();
-        if (!count($documentMap_cache)) {
-            foreach ($this->documentMap as $document) {
-                foreach ($document as $p => $c) {
-                    $documentMap_cache[$p][] = $c;
-                }
-            }
-        }
-
+        
+        $childrenIds = $this->getChildrenIds($id,$depth,$children);
+        $childmap = array ();
         // Get all the children for this parent node
-        if (isset($documentMap_cache[$id])) {
-            $depth--;
-
-            foreach ($documentMap_cache[$id] as $childId) {
+        if ($childrenIds) {
+            foreach ($childrenIds as $childId) {
                 $al = $this->cacheManager->getAliasListing($childId);
                 $pkey = (strlen($al['path']) ? "{$al['path']}/" : '') . $al['alias'];
                 if (!strlen($pkey)) $pkey = "{$childId}";
-                    $children[$pkey] = $childId;
-
-                if ($depth) {
-                    $children += $this->getChildIds($childId, $depth);
-                }
+                $childmap[$pkey] = $childId;
             }
         }
-        return $children;
+        return $childmap;
     }
 
+    
+    /**
+     * Returns an array of child IDs belonging to the specified parent(s).
+     *
+     * @param int $ids The parent resource/document to start from or an array of parents
+     * @param int $depth How many levels deep to search for children, default: 10
+     * @param array $children Optional array of docids to merge with the result.
+     * @return array Contains all child IDs
+     */
+    function getChildrenIds($ids, $depth= 10, $children= array ()) {
+        
+        /* should we optimize for this?
+        if ($depth == 0 && ($ids == 0 || in_array(0, $ids)) {
+            //return all documents
+        }
+        */
+        
+        if ($depth == 0) {
+            $depth = 10000;
+                // Impliment unlimited depth...
+        }
+  
+        if(!is_array($ids)){
+            $childrenIds = $this->cacheManager->getChildren($ids);
+        
+            // Get all the children for this parent node
+            if ($childrenIds) {
+                $depth--;
+                $children += $childrenIds;
+                if ($depth) {
+                    foreach ($childrenIds as $childId) {
+                        $children += $this->getChildren($childId, $depth);
+                    }
+                }
+            }
+        } else {
+            //handle arrays
+            if (count($ids) == 1){
+                $children += $this->getChildrenIds($ids[0], $depth);
+            } else {
+                foreach ($ids AS $id) {
+                    $childIds = $this->getChildrenIds($id, $depth);
+                    if (!empty($childIds)) {
+                        $children = array_merge($childIds,$children);
+                    }
+                }
+                //results might be over lapping - should this be optimised?
+                $children = array_unique($children);
+            }
+        }
+	return $children;
+    }
+    
     /**
      * Displays a javascript alert message in the web browser
      *

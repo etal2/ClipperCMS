@@ -96,14 +96,15 @@ if(!isset($_POST['import'])) {
 <?php
 }
 
-function importFiles($parent,$filepath,$files, &$tmpDocumentListing = array()) {
+function importFiles($parent,$filepath,$files) {
 
     global $modx;
     global $_lang, $allowedfiles;
     global $dbase, $table_prefix;
     global $default_template, $search_default, $cache_default, $publish_default;
 
-
+    static $tmpDocumentListing = array();
+    
     $createdon = time();
     $createdby = $modx->getLoginUserID();
     if (!is_array($files)) return;
@@ -123,7 +124,7 @@ function importFiles($parent,$filepath,$files, &$tmpDocumentListing = array()) {
                 exit;
             }
             echo "<p class=\"success\">".$_lang["import_site_success"]."</p>";
-            importFiles($new_parent,$filepath."/$id/",$value,$tmpDocumentListing);
+            importFiles($new_parent,$filepath."/$id/",$value);
         }
         else {
             // create document
