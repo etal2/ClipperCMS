@@ -1,78 +1,33 @@
 <?php
-// cache & synchronise class
+// cache & synchronize class
 
 class synccache{
     var $cachePath;
     var $showReport;
-    var $deletedfiles = array();
+    
     var $aliases = array();
     var $parents = array();
 
-    //variables moved from document parser:
-    /*
-     * Array of various config settings
-     */
-    var $config;
-    var $chunkCache;
-    var $snippetCache;
-    var $pluginCache;
-    var $pluginEvent;
+    private $initialized = false;
     
-    /*
-     * Array of documents with non default content type (not text/html)
-     * Key is document id
-     * Value is content type
-     */
-    var $contentTypes;
+    private $storageEngine = null;
     
-    /*
-     * Array of all documents
-     * Key is document id
-     * Value is an array containing 'id', 'alias', 'path', 'parent'
-     */
-    var $aliasListing;
-    
-    /*
-     * Array of all documents
-     * Key is document url (changes depending on friendly url settings)
-     * Value is document id
-     */
-    var $documentListing;
-    
-    /*
-     * Array of all documents
-     * No Key
-     * Values are arrays of parentId => childId
-     */
-    var $documentMap;
-    
-    /*
-     * Array of all documents
-     * Key is document id
-     * Values are arrays of direct child ids
-     */
-    var $childMap;
-    
-    var $initialized = false;
+    function __construct() {
+        if(include_once MODX_BASE_PATH . "/manager/includes/cache/modx.storage.engine.class.php"){
+            $this->storageEngine = new modxStorageEngine();
+        } else {
+            throw new Exception("Cannot initialize cache storage engine");
+        }
+    }
     
     function setCachepath($path) {
         $this->cachePath = $path;
+        $this->storageEngine->setCachepath($path);
     }
 
     function setReport($bool) {
         $this->showReport = $bool;
-    }
-
-    function escapeDoubleQuotes($s) {
-        $q1 = array("\\","\"","\r","\n","\$");
-        $q2 = array("\\\\","\\\"","\\r","\\n","\\$");
-        return str_replace($q1,$q2,$s);
-    }
-
-    function escapeSingleQuotes($s) {
-        $q1 = array("\\","'");
-        $q2 = array("\\\\","\\'");
-        return str_replace($q1,$q2,$s);
+        $this->storageEngine->setReport($bool);
     }
 
     function getParents($id, $path = '') { // modx:returns child's parent
@@ -97,153 +52,165 @@ class synccache{
     /**
      * Load everything, rebuild cache if necessary
      */
-    function init($modx) {
+    public function init($modx) {
         if(!$this->initialized){
-            if ($included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
-                $included= include_once (MODX_BASE_PATH . 'assets/cache/siteCache.idx.php');
+            if(!isset($this->cachePath)){
+                setCachepath(MODX_BASE_PATH . "/assets/cache/");
             }
-            if (!$included || !is_array($this->config) || empty ($this->config)) {
-                if(!isset($this->cachePath)){
-                    setCachepath(MODX_BASE_PATH . "/assets/cache/");
-                }
-                //setReport(false);
-                $rebuilt = $this->buildCache($modx);
-                $included = false;
-                if($rebuilt && $included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
-                    $included= include MODX_BASE_PATH . 'assets/cache/siteCache.idx.php';
-                }
-            }
-            if(!$included)die('Could not initialize cache.');
+            //setReport(false);
+            $this->storageEngine->init($modx);
             $this->initialized = true;
         }
     }
     
+    /*
+     * returns an array of various config settings
+     */
     public function getConfig(){
-        return $this->config;
+        return $this->storageEngine->getConfig();
     }
     
+    /*
+     * returns an array of system events and the plugins mapped to them
+     */
     public function getPluginEvents(){
-        return $this->pluginEvent;
+        return $this->storageEngine->getPluginEvents();
     }
     
+    /*
+     * returns the chunck code (string)
+     */
     public function getChunk($chunkname){
-        return $this->chunkCache[$chunkname];
+        return $this->storageEngine->getChunk($chunkname);
     }
     
+    /*
+     * stores the chunck in cache
+     */
     public function setChunk($chunkname, $chunkvalue){
-        return $this->chunkCache[$chunkname] = $chunkvalue;
+        return $this->storageEngine->setChunk($chunkname, $chunkvalue);
     }
     
+    /*
+     * checkes if chunck is stored in cache
+     * returnes boolean
+     */
     public function containsChunk($chunkname){
-        return array_key_exists ($chunkname, $this->chunkCache);
+        return $this->storageEngine->containsChunk($chunkname);
     }
     
+    /*
+     * returns the snippet code or snippet properties (snippet name + 'Props')
+     */
     public function getSnippet($snippetname){
-        return $this->snippetCache[$snippetname];
+        return $this->storageEngine->getSnippet($snippetname);
     }
     
+    /*
+     * stores the snippet (or properties) in cache
+     */
     public function setSnippet($snippetname, $snippetvalue){
-        return $this->snippetCache[$snippetname] = $snippetvalue;
+        return $this->storageEngine->setSnippet($snippetname, $snippetvalue);
     }
     
+    /*
+     * checkes if snippet is stored in cache
+     * returnes boolean
+     */
     public function containsSnippet($snippetname){
-        return array_key_exists ($snippetname, $this->snippetCache);
+        return $this->storageEngine->containsSnippet($snippetname);
     }
     
     public function getPlugin($pluginname){
-        return $this->pluginCache[$pluginname];
+        return $this->storageEngine->getPlugin($pluginname);
     }
     
     public function setPlugin($pluginname, $pluginvalue){
-        return $this->pluginCache[$pluginname] = $pluginvalue;
+        return $this->storageEngine->setPlugin($pluginname, $pluginvalue);
     }
     
     public function containsPlugin($pluginname){
-        return array_key_exists ($pluginname, $this->pluginCache);
+        return $this->storageEngine->containsPlugin($pluginname);
     }
     
     public function getContentType($documentIdentifier){
-        return $this->contentTypes[$documentIdentifier];
+        return $this->storageEngine->getContentType($documentIdentifier);
     }   
     
     public function getAliasListing($documentIdentifier){
-        return $this->aliasListing[$documentIdentifier];
+        return $this->storageEngine->getAliasListing($documentIdentifier);
     }
     
     public function containsAliasListing($documentIdentifier){
-        return array_key_exists ($documentIdentifier, $this->aliasListing);
+        return $this->storageEngine->containsAliasListing($documentIdentifier);
     }
     
     public function getDocumentListing($documentIdentifier){
-        return $this->documentListing[$documentIdentifier];
+        return $this->storageEngine->getDocumentListing($documentIdentifier);
     }
     
     public function containsDocumentListing($documentIdentifier){
-        return array_key_exists ($documentIdentifier, $this->documentListing);
+        return $this->storageEngine->containsDocumentListing($documentIdentifier);
     }
     
     public function getChildren($documentIdentifier){
-        return $this->childMap[$documentIdentifier];
+        return $this->storageEngine->getChildren($documentIdentifier);
     }
     
-    public function getDocumentMap(){
-        return $this->documentMap;
-    }
-    
-    function emptyCache($modx = null) {
+    public function emptyCache($modx = null) {
         if((function_exists('is_a') && is_a($modx, 'DocumentParser') === false) || get_class($modx) !== 'DocumentParser') {
             $modx = $GLOBALS['modx'];
         }
-        if(!isset($this->cachePath)) {
-            echo "Cache path not set.";
-            exit;
-        }
-        $filesincache = 0;
-        $deletedfilesincache = 0;
-        if (function_exists('glob')) {
-            // New and improved!
-            $files = glob(realpath($this->cachePath).'/*');
-            $filesincache = count($files);
-            $deletedfiles = array();
-            while ($file = array_shift($files)) {
-                $name = basename($file);
-                if (preg_match('/\.pageCache/',$name) && !in_array($name, $deletedfiles)) {
-                    $deletedfilesincache++;
-                    $deletedfiles[] = $name;
-                    unlink($file);
-                }
-            }
-        } else {
-            // Old way of doing it (no glob function available)
-            if ($handle = opendir($this->cachePath)) {
-                // Initialize deleted per round counter
-                $deletedThisRound = 1;
-                while ($deletedThisRound){
-                    if(!$handle) $handle = opendir($this->cachePath);
-                    $deletedThisRound = 0;
-                    while (false !== ($file = readdir($handle))) {
-                        if ($file != "." && $file != "..") {
-                            $filesincache += 1;
-                            if ( preg_match("/\.pageCache/", $file) && (!is_array($deletedfiles) || !array_search($file,$deletedfiles)) ) {
-                                $deletedfilesincache += 1;
-                                $deletedThisRound++;
-                                $deletedfiles[] = $file;
-                                unlink($this->cachePath.$file);
-                            } // End if
-                        } // End if
-                    } // End while
-                    closedir($handle);
-                    $handle = '';
-                } // End while ($deletedThisRound)
-            }
-        }
-
+        $report = $this->storageEngine->emptyCache($modx);
         $this->buildCache($modx);
+        $nextevent = $this->getNextPublishTime($modx);
+        $this->storeNextPublishTime($nextevent);
 
-/****************************************************************************/
-/*  PUBLISH TIME FILE                                                       */
-/****************************************************************************/
+        // finished cache stuff.
+        if($this->showReport==true) {
+            global $_lang;
+            printf($_lang['refresh_cache'], $report->filesincache, $report->deletedfilesincache);
+            $limit = count($report->deletedfiles);
+            if($limit > 0) {
+                echo '<p>'.$_lang['cache_files_deleted'].'</p><ul>';
+                for($i=0;$i<$limit; $i++) {
+                    echo '<li>',$report->deletedfiles[$i],'</li>';
+                }
+                echo '</ul>';
+            }
+        }
+    }
 
+    /**
+     * Store next publish time
+     * should be moved into storage engine later
+     * @param type $nextevent
+     */
+    private function storeNextPublishTime($nextevent){
+        // write the file
+        $filename = $this->cachePath.'/sitePublishing.idx.php';
+        $somecontent = '<?php $cacheRefreshTime='.$nextevent.'; ?>';
+
+        if (!$handle = fopen($filename, 'w')) {
+             echo 'Cannot open file ('.$filename.')';
+             exit;
+        }
+
+        // Write $somecontent to our opened file.
+        if (fwrite($handle, $somecontent) === FALSE) {
+           echo 'Cannot write publishing info file! Make sure the assets/cache directory is writable!';
+           exit;
+        }
+
+        fclose($handle);
+    }
+    
+    /**
+     * Calculate next publish time
+     * @param type $modx
+     * @return int
+     */
+    private function getNextPublishTime($modx){
         // update publish time file
         $timesArr = array();
         $sql = 'SELECT MIN(pub_date) AS minpub FROM '.$modx->getFullTableName('site_content').' WHERE pub_date>'.time();
@@ -272,52 +239,20 @@ class synccache{
         } else {
             $nextevent = 0;
         }
-
-        // write the file
-        $filename = $this->cachePath.'/sitePublishing.idx.php';
-        $somecontent = '<?php $cacheRefreshTime='.$nextevent.'; ?>';
-
-        if (!$handle = fopen($filename, 'w')) {
-             echo 'Cannot open file ('.$filename.')';
-             exit;
-        }
-
-        // Write $somecontent to our opened file.
-        if (fwrite($handle, $somecontent) === FALSE) {
-           echo 'Cannot write publishing info file! Make sure the assets/cache directory is writable!';
-           exit;
-        }
-
-        fclose($handle);
-
-
-/****************************************************************************/
-/*  END OF PUBLISH TIME FILE                                                */
-/****************************************************************************/
-
-        // finished cache stuff.
-        if($this->showReport==true) {
-        global $_lang;
-            printf($_lang['refresh_cache'], $filesincache, $deletedfilesincache);
-            $limit = count($deletedfiles);
-            if($limit > 0) {
-                echo '<p>'.$_lang['cache_files_deleted'].'</p><ul>';
-                for($i=0;$i<$limit; $i++) {
-                    echo '<li>',$deletedfiles[$i],'</li>';
-                }
-                echo '</ul>';
-            }
-        }
+        
+        return $nextevent;
     }
-
+    
+    
     /**
      * build siteCache file
      * @param  DocumentParser $modx
      * @return boolean success
      */
     function buildCache($modx) {
-        $tmpPHP = "<?php\n";
-
+        
+        $this->storageEngine->startCacheBuild($modx);
+        
         // SETTINGS & DOCUMENT LISTINGS CACHE
 
         // get settings
@@ -325,19 +260,14 @@ class synccache{
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
         $config = array();
-        $tmpPHP .= '$c=&$this->config;'."\n";
+        
         while(list($key,$value) = $modx->db->getRow($rs,'num')) {
-            $tmpPHP .= '$c[\''.$key.'\']'.' = "'.$this->escapeDoubleQuotes($value)."\";\n";
+            $this->storageEngine->storeConfigSetting($key, $value);
             $config[$key] = $value;
         }
 
         // get aliases modx: support for alias path
         $tmpPath = '';
-        $tmpPHP .= '$this->aliasListing = array();' . "\n";
-        $tmpPHP .= '$a = &$this->aliasListing;' . "\n";
-        $tmpPHP .= '$d = &$this->documentListing;' . "\n";
-        $tmpPHP .= '$m = &$this->documentMap;' . "\n";
-        $tmpPHP .= '$x = &$this->childMap;' . "\n";
         $sql = 'SELECT IF(alias=\'\', id, alias) AS alias, id, contentType, parent FROM '.$modx->getFullTableName('site_content').' WHERE deleted=0 ORDER BY parent, menuindex';
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
@@ -347,14 +277,13 @@ class synccache{
                 $tmpPath = $this->getParents($tmp1['parent']);
                 $alias= (strlen($tmpPath) > 0 ? "$tmpPath/" : '').$tmp1['alias'];
                 $alias= $modx->db->escape($alias);
-                $tmpPHP .= '$d[\''.$alias.'\']'." = ".$tmp1['id'].";\n";
+                $this->storageEngine->storeDocumentListing($alias, $tmp1['id']);
             }
             else {
-                $tmpPHP .= '$d[\''.$modx->db->escape($tmp1['alias']).'\']'." = ".$tmp1['id'].";\n";
+                $this->storageEngine->storeDocumentListing($modx->db->escape($alias), $tmp1['id']);
             }
-            $tmpPHP .= '$a[' . $tmp1['id'] . ']'." = array('id' => ".$tmp1['id'].", 'alias' => '".$modx->db->escape($tmp1['alias'])."', 'path' => '" . $modx->db->escape($tmpPath)."', 'parent' => " . $tmp1['parent']. ");\n";
-            $tmpPHP .= '$m[]'." = array('".$tmp1['parent']."' => '".$tmp1['id']."');\n";
-            $tmpPHP .= '$x[' . $tmp1['parent'] . '][]='.$tmp1['id'].";\n";
+            $this->storageEngine->storeAliasListing($tmp1['id'], array('id' => $tmp1['id'], 'alias' => $modx->db->escape($tmp1['alias']), 'path' => $modx->db->escape($tmpPath), 'parent' => $tmp1['parent']));
+            $this->storageEngine->storeChildMap($tmp1['parent'],$tmp1['id']);
         }
 
 
@@ -362,20 +291,18 @@ class synccache{
         $sql = 'SELECT id, contentType FROM '.$modx->getFullTableName('site_content')." WHERE contentType != 'text/html'";
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
-        $tmpPHP .= '$c = &$this->contentTypes;' . "\n";
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $tmpPHP .= '$c['.$tmp1['id'].']'." = '".$tmp1['contentType']."';\n";
+           $this->storageEngine->storeContentType($tmp1['id'], $tmp1['contentType']);
         }
 
         // WRITE Chunks to cache file
         $sql = 'SELECT * FROM '.$modx->getFullTableName('site_htmlsnippets');
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
-        $tmpPHP .= '$c = &$this->chunkCache;' . "\n";
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $tmpPHP .= '$c[\''.$modx->db->escape($tmp1['name']).'\']'." = '".$this->escapeSingleQuotes($tmp1['snippet'])."';\n";
+           $this->storageEngine->storeChunk($modx->db->escape($tmp1['name']), $tmp1['snippet']);
         }
 
         // WRITE snippets to cache file
@@ -384,13 +311,12 @@ class synccache{
                 'LEFT JOIN '.$modx->getFullTableName('site_modules').' sm on sm.guid=ss.moduleguid';
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
-        $tmpPHP .= '$s = &$this->snippetCache;' . "\n";
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $tmpPHP .= '$s[\''.$modx->db->escape($tmp1['name']).'\']'." = '".$this->escapeSingleQuotes($tmp1['snippet'])."';\n";
+           $this->storageEngine->storeSnippet($modx->db->escape($tmp1['name']),$tmp1['snippet']);
            // Raymond: save snippet properties to cache
-           if ($tmp1['properties']!=""||$tmp1['sharedproperties']!="") $tmpPHP .= '$s[\''.$tmp1['name'].'Props\']'." = '".$this->escapeSingleQuotes($tmp1['properties']." ".$tmp1['sharedproperties'])."';\n";
-           // End mod
+           if ($tmp1['properties']!=""||$tmp1['sharedproperties']!="") $this->storageEngine->storeSnippet($tmp1['name'].'Props', $tmp1['properties']." ".$tmp1['sharedproperties']);
+            // End mod
         }
 
         // WRITE plugins to cache file
@@ -400,11 +326,10 @@ class synccache{
                 'WHERE sp.disabled=0';
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
-        $tmpPHP .= '$p = &$this->pluginCache;' . "\n";
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $tmpPHP .= '$p[\''.$modx->db->escape($tmp1['name']).'\']'." = '".$this->escapeSingleQuotes($tmp1['plugincode'])."';\n";
-           if ($tmp1['properties']!=''||$tmp1['sharedproperties']!='') $tmpPHP .= '$p[\''.$tmp1['name'].'Props\']'." = '".$this->escapeSingleQuotes($tmp1['properties'].' '.$tmp1['sharedproperties'])."';\n";
+           $this->storageEngine->storePlugin($modx->db->escape($tmp1['name']), $tmp1['plugincode']);
+           if ($tmp1['properties']!=''||$tmp1['sharedproperties']!='') $this->storageEngine->storePlugin($tmp1['name'].'Props', $tmp1['properties'].' '.$tmp1['sharedproperties']);
         }
 
 
@@ -418,35 +343,19 @@ class synccache{
         $events = array();
         $rs = $modx->db->query($sql);
         $limit_tmp = $modx->db->getRecordCount($rs);
-        $tmpPHP .= '$e = &$this->pluginEvent;' . "\n";
         for ($i=0; $i<$limit_tmp; $i++) {
             $evt = $modx->db->getRow($rs);
             if(!$events[$evt['evtname']]) $events[$evt['evtname']] = array();
             $events[$evt['evtname']][] = $evt['name'];
         }
         foreach($events as $evtname => $pluginnames) {
-            $tmpPHP .= '$e[\''.$evtname.'\'] = array(\''.implode("','",$this->escapeSingleQuotes($pluginnames))."');\n";
+            $this->storageEngine->storePluginEvents($evtname, $pluginnames);
         }
-
-        // close and write the file
-        $tmpPHP .= "\n";
-        $filename = $this->cachePath.'siteCache.idx.php';
-        $somecontent = $tmpPHP;
 
         // invoke OnBeforeCacheUpdate event
         if ($modx) $modx->invokeEvent('OnBeforeCacheUpdate');
 
-        if (!$handle = fopen($filename, 'w')) {
-             echo 'Cannot open file (',$filename,')';
-             exit;
-        }
-
-        // Write $somecontent to our opened file.
-        if (fwrite($handle, $somecontent) === FALSE) {
-           echo 'Cannot write main cache file! Make sure the assets/cache directory is writable!';
-           exit;
-        }
-        fclose($handle);
+        $this->storageEngine->finalizeCacheBuild();
 
         // invoke OnCacheUpdate event
         if ($modx) $modx->invokeEvent('OnCacheUpdate');

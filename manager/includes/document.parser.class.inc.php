@@ -42,13 +42,6 @@ class DocumentParser {
     var $loadedjscripts;
     var $forwards= 3;
     
-    //var $chunkCache;    //cache object
-    //var $snippetCache;  //cache object
-    //var $contentTypes;  //cache object
-    //var $documentListing;   //cache object
-    //var $documentMap;   //cache object
-    //var $aliases; //not in use anymore
-    
     /**
      * @var array Map forked snippet names to names of earlier compatible snippets.
      * Note that keys are all lowercase.
@@ -82,6 +75,51 @@ class DocumentParser {
         $this->cacheManager->setReport(false);
     }
 
+    /**
+     * Magic function in order to maintain maximum backward compatibility
+     * with old modx cache implementation. Accessing these variables is not recommended
+     * and might be slow. New storage engines might not support these.
+     * @param type $var
+     * @return null
+     * @throws Exception
+     *
+    public function __get( $var ){
+        $value = null;
+        switch( $var ){
+            case "chunkCache" : $this->chunkCache = $this->cacheManager->getChunkCache(); 
+                $value = $this->chunkCache;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            case "snippetCache" : $this->snippetCache = $this->cacheManager->getSnippetCache();
+                $value = $this->snippetCache;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            case "contentTypes" : $this->contentTypes = $this->cacheManager->getContentTypes();
+                $value = $this->contentTypes;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            case "documentListing" : $this->documentListing = $this->cacheManager->getDocumentListing();
+                $value = $this->documentListing;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            case "documentMap" : $this->documentMap = $this->cacheManager->getDocumentMap();
+                $value = $this->documentMap;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            case "aliases" : $this->aliases = array();
+                $value = $this->aliases;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            case "aliasListing" : $this->aliasListing = $this->cacheManager->getAliasListing();
+                $value = $this->aliasListing;
+                $this->logEvent(29,2,"Accessing deprecated variable \$modx->$var is not recommended");
+                break;
+            default : break;
+        }
+        if($value != null)
+            return $value;
+    }*/
+    
     /**
      * Loads an extension from the extenders folder.
      * Currently of limited use - can only load the DBAPI and ManagerAPI.
@@ -321,13 +359,6 @@ class DocumentParser {
             //read settings from cache
             $this->config = $this->cacheManager->getConfig();
             $this->pluginEvent = $this->cacheManager->getPluginEvents();
-            //$this->contentTypes = $this->cacheManager->getContentTypes();
-            //$this->pluginCache = $this->cacheManager->getPluginCache();
-            //$this->chunkCache = $this->cacheManager->getChunkCache();
-            //$this->snippetCache = $this->cacheManager->getSnippetCache();
-            //$this->aliasListing = $this->cacheManager->getAliasListing();
-            //$this->documentListing = $this->cacheManager->getDocumentListing();
-            //$this->documentMap = $this->cacheManager->getDocumentMap();
             
             if(!is_array($this->config) || empty ($this->config)) {
                 $result= $this->db->query('SELECT setting_name, setting_value FROM ' . $this->getFullTableName('system_settings'));
