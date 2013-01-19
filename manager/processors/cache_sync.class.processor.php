@@ -119,12 +119,28 @@ class synccache{
         return $this->pluginEvent;
     }
     
-    public function getChunkCache(){
-        return $this->chunkCache;
+    public function getChunk($chunkname){
+        return $this->chunkCache[$chunkname];
     }
     
-    public function getSnippetCache(){
-        return $this->snippetCache;
+    public function setChunk($chunkname, $chunkvalue){
+        return $this->chunkCache[$chunkname] = $chunkvalue;
+    }
+    
+    public function containsChunk($chunkname){
+        return array_key_exists ($chunkname, $this->chunkCache);
+    }
+    
+    public function getSnippet($snippetname){
+        return $this->snippetCache[$snippetname];
+    }
+    
+    public function setSnippet($snippetname, $snippetvalue){
+        return $this->snippetCache[$snippetname] = $snippetvalue;
+    }
+    
+    public function containsSnippet($snippetname){
+        return array_key_exists ($snippetname, $this->snippetCache);
     }
     
     public function getPluginCache(){
@@ -139,7 +155,7 @@ class synccache{
         return $this->aliasListing[$documentIdentifier];
     }
     
-    public function existsAliasListing($documentIdentifier){
+    public function containsAliasListing($documentIdentifier){
         return array_key_exists ($documentIdentifier, $this->aliasListing);
     }
     
@@ -147,7 +163,7 @@ class synccache{
         return $this->documentListing[$documentIdentifier];
     }
     
-    public function existsDocumentListing($documentIdentifier){
+    public function containsDocumentListing($documentIdentifier){
         return array_key_exists ($documentIdentifier, $this->documentListing);
     }
     

@@ -42,12 +42,12 @@ class DocumentParser {
     var $loadedjscripts;
     var $forwards= 3;
     
-    var $chunkCache;    //cache object
-    var $snippetCache;  //cache object
+    //var $chunkCache;    //cache object
+    //var $snippetCache;  //cache object
     //var $contentTypes;  //cache object
     //var $documentListing;   //cache object
     var $documentMap;   //cache object
-    var $aliases; //not in use anymore
+    //var $aliases; //not in use anymore
     
     /**
      * @var array Map forked snippet names to names of earlier compatible snippets.
@@ -322,8 +322,8 @@ class DocumentParser {
             //$this->contentTypes = $this->cache->getContentTypes();
             $this->pluginEvent = $this->cache->getPluginEvent();
             $this->pluginCache = $this->cache->getPluginCache();
-            $this->chunkCache = $this->cache->getChunkCache();
-            $this->snippetCache = $this->cache->getSnippetCache();
+            //$this->chunkCache = $this->cache->getChunkCache();
+            //$this->snippetCache = $this->cache->getSnippetCache();
             //$this->aliasListing = $this->cache->getAliasListing();
             //$this->documentListing = $this->cache->getDocumentListing();
             $this->documentMap = $this->cache->getDocumentMap();
@@ -910,21 +910,18 @@ class DocumentParser {
         if (preg_match_all('~{{(.*?)}}~', $content, $matches)) {
             $settingsCount= count($matches[1]);
             for ($i= 0; $i < $settingsCount; $i++) {
-                if (isset ($this->chunkCache[$matches[1][$i]])) {
-                    $replace[$i]= $this->chunkCache[$matches[1][$i]];
-                } else {
+                if (!$this->cache->containsChunk($matches[1][$i])) {
                     $sql= "SELECT `snippet` FROM " . $this->getFullTableName("site_htmlsnippets") . " WHERE " . $this->getFullTableName("site_htmlsnippets") . ".`name`='" . $this->db->escape($matches[1][$i]) . "';";
                     $result= $this->db->query($sql);
                     $limit= $this->db->getRecordCount($result);
                     if ($limit < 1) {
-                        $this->chunkCache[$matches[1][$i]]= "";
-                        $replace[$i]= "";
+                        $this->cache->setChunk($matches[1][$i],"");
                     } else {
                         $row= $this->db->getRow($result);
-                        $this->chunkCache[$matches[1][$i]]= $row['snippet'];
-                        $replace[$i]= $row['snippet'];
+                        $this->cache->setChunk($matches[1][$i],$row['snippet']);
                     }
                 }
+                $replace[$i]= $this->cache->getChunk($matches[1][$i]);
             }
             $content= str_replace($matches[0], $replace, $content);
         }
@@ -1029,11 +1026,11 @@ class DocumentParser {
             }
             $nrSnippetsToGet= $matchCount;
             for ($i= 0; $i < $nrSnippetsToGet; $i++) { // Raymond: Mod for Snippet props
-                if (isset ($this->snippetCache[$matches[1][$i]])) {
+                if ($this->cache->containsSnippet($matches[1][$i])) {
                     $snippets[$i]['name']= $matches[1][$i];
-                    $snippets[$i]['snippet']= $this->snippetCache[$matches[1][$i]];
-                    if (array_key_exists($matches[1][$i] . "Props", $this->snippetCache))
-                        $snippets[$i]['properties']= $this->snippetCache[$matches[1][$i] . "Props"];
+                    $snippets[$i]['snippet']= $this->cache->getSnippet($matches[1][$i]);
+                    if ($this->cache->containsSnippet($matches[1][$i] . "Props"))
+                        $snippets[$i]['properties']= $this->cache->getSnippet($matches[1][$i] . "Props");
                 } else {
                     // get from db and store a copy inside cache
                     $sql= "SELECT `name`, `snippet`, `properties` FROM " . $this->getFullTableName("site_snippets") . " WHERE " . $this->getFullTableName("site_snippets") . ".`name`='" . $this->db->escape($matches[1][$i]) . "';";
@@ -1043,15 +1040,18 @@ class DocumentParser {
                         $row= $this->db->getRow($result);
                         if($row['name'] == $matches[1][$i]) {
                             $snippets[$i]['name']= $row['name'];
-                            $snippets[$i]['snippet']= $this->snippetCache[$row['name']]= $row['snippet'];
-                            $snippets[$i]['properties']= $this->snippetCache[$row['name'] . "Props"]= $row['properties'];
+                            $snippets[$i]['snippet']= $row['snippet'];
+                            $snippets[$i]['properties']= $row['properties'];
+                            $this->cache->setSnippet($row['name'],$row['snippet']);
+                            $this->cache->setSnippet($row['name'] . "Props",$row['properties']);
                             $added = true;
                         }
                     }
                     if(!$added) {
                         $snippets[$i]['name']= $matches[1][$i];
-                        $snippets[$i]['snippet']= $this->snippetCache[$matches[1][$i]]= "return false;";
+                        $snippets[$i]['snippet']= "return false;";
                         $snippets[$i]['properties']= '';
+                        $this->cache->setSnippet($matches[1][$i],"return false;");
                     }
                 }
             }
@@ -2208,18 +2208,21 @@ class DocumentParser {
              $snippetName = $this->snippetMap[strtolower($snippetName)];
         }
 
-        if (isset ($this->snippetCache[$snippetName])) {
-            $snippet= $this->snippetCache[$snippetName];
-            $properties= $this->snippetCache[$snippetName . "Props"];
+        if ($this->cache->containsSnippet($snippetName)) {
+            $snippet= $this->cache->getSnippet($snippetName);
+            $properties= $this->cache->getSnippet($snippetName . "Props");
         } else { // not in cache so let's check the db
             $sql= "SELECT `name`, `snippet`, `properties` FROM " . $this->getFullTableName("site_snippets") . " WHERE " . $this->getFullTableName("site_snippets") . ".`name`='" . $this->db->escape($snippetName) . "';";
             $result= $this->db->query($sql);
             if ($this->db->getRecordCount($result) == 1) {
                 $row= $this->db->getRow($result);
-                $snippet= $this->snippetCache[$row['name']]= $row['snippet'];
-                $properties= $this->snippetCache[$row['name'] . "Props"]= $row['properties'];
+                $snippet= $row['snippet'];
+                $properties= $row['properties'];
+                $this->cache->setSnippet($row['name'], $row['snippet']);
+                $this->cache->setSnippet($row['name'] . "Props", $row['properties']);
             } else {
-                $snippet= $this->snippetCache[$snippetName]= "return false;";
+                $snippet= "return false;";
+                $this->cache->setSnippet($snippetName, $snippet);
                 $properties= '';
             }
         }
@@ -2237,7 +2240,7 @@ class DocumentParser {
      * @return boolean|string
      */
    function getChunk($chunkName) {
-        $t= $this->chunkCache[$chunkName];
+        $t= $this->cache->getChunk($chunkName);
         return $t;
     }
 
