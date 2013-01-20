@@ -13,10 +13,15 @@ class synccache{
     private $storageEngine = null;
     
     function __construct() {
-        if(include_once MODX_BASE_PATH . "/manager/includes/cache/modx.storage.engine.class.php"){
-            $this->storageEngine = new modxStorageEngine();
+        
+        //$engine = 'modx';
+        $engine = 'flintstone';
+        
+        if(include_once MODX_BASE_PATH . "/manager/includes/cache/$engine.storage.engine.class.php"){
+            $engineclassname= $engine.'StorageEngine';
+            $this->storageEngine = new $engineclassname();
         } else {
-            throw new Exception("Cannot initialize cache storage engine");
+            throw new Exception("Cannot initialize $engine cache storage engine");
         }
     }
     
@@ -161,7 +166,8 @@ class synccache{
         if((function_exists('is_a') && is_a($modx, 'DocumentParser') === false) || get_class($modx) !== 'DocumentParser') {
             $modx = $GLOBALS['modx'];
         }
-        $report = $this->storageEngine->emptyCache($modx);
+        $this->storageEngine->emptyCache();
+        $report = $this->deletePageCache();
         $this->buildCache($modx);
         $nextevent = $this->getNextPublishTime($modx);
         $this->storeNextPublishTime($nextevent);
@@ -181,6 +187,61 @@ class synccache{
         }
     }
 
+    private $deletedfiles = array();
+    
+    private function deletePageCache() {
+        if(!isset($this->cachePath)) {
+            echo "Cache path not set.";
+            exit;
+        }
+        $filesincache = 0;
+        $deletedfilesincache = 0;
+        if (function_exists('glob')) {
+            // New and improved!
+            $files = glob(realpath($this->cachePath).'/*');
+            $filesincache = count($files);
+            $deletedfiles = array();
+            while ($file = array_shift($files)) {
+                $name = basename($file);
+                if (preg_match('/\.pageCache/',$name) && !in_array($name, $deletedfiles)) {
+                    $deletedfilesincache++;
+                    $deletedfiles[] = $name;
+                    unlink($file);
+                }
+            }
+        } else {
+            // Old way of doing it (no glob function available)
+            if ($handle = opendir($this->cachePath)) {
+                // Initialize deleted per round counter
+                $deletedThisRound = 1;
+                while ($deletedThisRound){
+                    if(!$handle) $handle = opendir($this->cachePath);
+                    $deletedThisRound = 0;
+                    while (false !== ($file = readdir($handle))) {
+                        if ($file != "." && $file != "..") {
+                            $filesincache += 1;
+                            if ( preg_match("/\.pageCache/", $file) && (!is_array($deletedfiles) || !array_search($file,$deletedfiles)) ) {
+                                $deletedfilesincache += 1;
+                                $deletedThisRound++;
+                                $deletedfiles[] = $file;
+                                unlink($this->cachePath.$file);
+                            } // End if
+                        } // End if
+                    } // End while
+                    closedir($handle);
+                    $handle = '';
+                } // End while ($deletedThisRound)
+            }
+        }
+
+        $report = array(
+            filesincache => $filesincache,
+            deletedfilesincache => $deletedfilesincache,
+            deletedfiles => $deletedfiles);
+        
+        return $report;
+    }
+    
     /**
      * Store next publish time
      * should be moved into storage engine later
@@ -251,7 +312,7 @@ class synccache{
      */
     function buildCache($modx) {
         
-        $this->storageEngine->startCacheBuild($modx);
+        $this->storageEngine->startCacheBuild();
         
         // SETTINGS & DOCUMENT LISTINGS CACHE
 

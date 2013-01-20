@@ -13,7 +13,6 @@ class modxStorageEngine  {
     
     private $cachePath;
     private $showReport = false;
-    private $deletedfiles = array();
     
     /*
      * Array of various config settings
@@ -204,65 +203,15 @@ class modxStorageEngine  {
         return $this->childMap[$documentIdentifier];
     }
     
-    function emptyCache($modx) {
-        if(!isset($this->cachePath)) {
-            echo "Cache path not set.";
-            exit;
-        }
-        $filesincache = 0;
-        $deletedfilesincache = 0;
-        if (function_exists('glob')) {
-            // New and improved!
-            $files = glob(realpath($this->cachePath).'/*');
-            $filesincache = count($files);
-            $deletedfiles = array();
-            while ($file = array_shift($files)) {
-                $name = basename($file);
-                if (preg_match('/\.pageCache/',$name) && !in_array($name, $deletedfiles)) {
-                    $deletedfilesincache++;
-                    $deletedfiles[] = $name;
-                    unlink($file);
-                }
-            }
-        } else {
-            // Old way of doing it (no glob function available)
-            if ($handle = opendir($this->cachePath)) {
-                // Initialize deleted per round counter
-                $deletedThisRound = 1;
-                while ($deletedThisRound){
-                    if(!$handle) $handle = opendir($this->cachePath);
-                    $deletedThisRound = 0;
-                    while (false !== ($file = readdir($handle))) {
-                        if ($file != "." && $file != "..") {
-                            $filesincache += 1;
-                            if ( preg_match("/\.pageCache/", $file) && (!is_array($deletedfiles) || !array_search($file,$deletedfiles)) ) {
-                                $deletedfilesincache += 1;
-                                $deletedThisRound++;
-                                $deletedfiles[] = $file;
-                                unlink($this->cachePath.$file);
-                            } // End if
-                        } // End if
-                    } // End while
-                    closedir($handle);
-                    $handle = '';
-                } // End while ($deletedThisRound)
-            }
-        }
-
-        $report = array();
-        $report->filesincache = $filesincache;
-        $report->deletedfilesincache = $deletedfilesincache;
-        $report->deletedfiles = $deletedfiles;
-        
-        return $report;
+    public function emptyCache() {
+        //noop
     }
-    
     
     private $tmpPHP;
     /**
      * start cache building procedure
      */
-    public function startCacheBuild($modx) {
+    public function startCacheBuild() {
         $this->tmpPHP = "<?php\n";
         $this->tmpPHP .= '$g=&$this->config;'."\n";
         $this->tmpPHP .= '$this->aliasListing = array();' . "\n";
@@ -333,13 +282,13 @@ class modxStorageEngine  {
         fclose($handle);
     }
     
-    function escapeDoubleQuotes($s) {
+    private function escapeDoubleQuotes($s) {
         $q1 = array("\\","\"","\r","\n","\$");
         $q2 = array("\\\\","\\\"","\\r","\\n","\\$");
         return str_replace($q1,$q2,$s);
     }
 
-    function escapeSingleQuotes($s) {
+    private function escapeSingleQuotes($s) {
         $q1 = array("\\","'");
         $q2 = array("\\\\","\\'");
         return str_replace($q1,$q2,$s);
