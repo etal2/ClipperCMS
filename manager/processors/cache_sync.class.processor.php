@@ -93,7 +93,7 @@ class synccache{
      * stores the chunck in cache
      */
     public function setChunk($chunkname, $chunkvalue){
-        return $this->storageEngine->setChunk($chunkname, $chunkvalue);
+        $this->storageEngine->setChunk($chunkname, $chunkvalue);
     }
     
     /*
@@ -115,7 +115,7 @@ class synccache{
      * stores the snippet (or properties) in cache
      */
     public function setSnippet($snippetname, $snippetvalue){
-        return $this->storageEngine->setSnippet($snippetname, $snippetvalue);
+        $this->storageEngine->setSnippet($snippetname, $snippetvalue);
     }
     
     /*
@@ -131,7 +131,7 @@ class synccache{
     }
     
     public function setPlugin($pluginname, $pluginvalue){
-        return $this->storageEngine->setPlugin($pluginname, $pluginvalue);
+        $this->storageEngine->setPlugin($pluginname, $pluginvalue);
     }
     
     public function containsPlugin($pluginname){
@@ -175,12 +175,12 @@ class synccache{
         // finished cache stuff.
         if($this->showReport==true) {
             global $_lang;
-            printf($_lang['refresh_cache'], $report->filesincache, $report->deletedfilesincache);
-            $limit = count($report->deletedfiles);
+            printf($_lang['refresh_cache'], $report['filesincache'], $report['deletedfilesincache']);
+            $limit = count($report['deletedfiles']);
             if($limit > 0) {
                 echo '<p>'.$_lang['cache_files_deleted'].'</p><ul>';
                 for($i=0;$i<$limit; $i++) {
-                    echo '<li>',$report->deletedfiles[$i],'</li>';
+                    echo '<li>',$report['deletedfiles'][$i],'</li>';
                 }
                 echo '</ul>';
             }

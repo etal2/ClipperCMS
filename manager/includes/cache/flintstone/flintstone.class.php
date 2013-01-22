@@ -531,7 +531,7 @@ class Flintstone {
 	 * @return array unserialized string
 	 */
 	private function unserialize($string) {
-		$string = preg_replace('!s:(\d+):"(.*?)";!se', "'s:'.strlen('$2').':\"$2\";'", $string);
+		//$string = preg_replace('!s:(\d+):"(.*?)";!se', "'s:'.strlen('$2').':\"$2\";'", $string);
 		return unserialize($string);
 	}
 	
