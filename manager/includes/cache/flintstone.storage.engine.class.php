@@ -1,11 +1,8 @@
 <?php
 
 /**
- * modx storage engine - filesystem based storage engine
- * based on the original modx cache implementation.
- * loads all values on startup and stores them in memory
- * slow startup time & high memory consumption - not most performant
- * supports extra compatibility bits
+ * flintstone storage engine - filesystem based storage engine
+ * based on flintstone php see: http://www.xeweb.net/flintstone/index.php
  * 
  * @author etal
  */

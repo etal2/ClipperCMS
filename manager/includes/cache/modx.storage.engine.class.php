@@ -3,9 +3,7 @@
 /**
  * modx storage engine - filesystem based storage engine
  * based on the original modx cache implementation.
- * loads all values on startup and stores them in memory
- * slow startup time & high memory consumption - not most performant
- * supports extra compatibility bits
+ * not very fast, scales badly but supports extra compatibility bits
  * 
  * @author etal
  */

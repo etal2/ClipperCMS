@@ -13,10 +13,11 @@ class synccache{
     private $storageEngine = null;
     
     //private $engine = 'modx';
+    //private $engine = 'apc';
     
     function __construct() {
         if(!isset($this->engine)){
-            //fallback to default$this->engine
+            //fallback to default engine
             $this->engine = 'flintstone';
         }
         
