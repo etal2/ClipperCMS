@@ -29,7 +29,7 @@ class apcStorageEngine  {
         
         if(!extension_loaded('apc')) throw new Exception("Cannot initialize apc cache without apc installed");
         
-        if (count(apc_fetch('config')) > 0) {
+        if (apc_exists('config_settings')) {
             $requires_cache_rebuild = false;
         } else {
             $requires_cache_rebuild = true;
@@ -41,7 +41,7 @@ class apcStorageEngine  {
      * returns an array of various config settings
      */
     public function getConfig(){
-        return apc_fetch('config');
+        return apc_fetch('config_settings');
     }
     
     /*
@@ -139,7 +139,6 @@ class apcStorageEngine  {
      * start cache building procedure
      */
     public function startCacheBuild() {
-        if($this->storage == null) $this->initStorage();
         $this->tmpConfig = array();
         $this->tmpPluginEvents = array();
         $this->tmpChildMap = array();
@@ -182,7 +181,7 @@ class apcStorageEngine  {
     }
     
     public function finalizeCacheBuild(){
-        apc_store('config', $this->tmpConfig);
+        apc_store('config_settings', $this->tmpConfig);
         apc_store('plugin_events', $this->tmpPluginEvents);
         foreach($this->tmpChildMap as $parent => $children){
             apc_store('document_children/'.$parent, $children);
