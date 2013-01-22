@@ -12,11 +12,15 @@ class synccache{
     
     private $storageEngine = null;
     
+    //private $engine = 'modx';
+    
     function __construct() {
+        if(!isset($this->engine)){
+            //fallback to default$this->engine
+            $this->engine = 'flintstone';
+        }
         
-        //$engine = 'modx';
-        $engine = 'flintstone';
-        
+        $engine = $this->engine;
         if(include_once MODX_BASE_PATH . "/manager/includes/cache/$engine.storage.engine.class.php"){
             $engineclassname= $engine.'StorageEngine';
             $this->storageEngine = new $engineclassname();
@@ -63,7 +67,19 @@ class synccache{
                 setCachepath(MODX_BASE_PATH . "/assets/cache/");
             }
             //setReport(false);
-            $this->storageEngine->init($modx);
+            $requires_rebuild = $this->storageEngine->init();
+            if($requires_rebuild){
+                //rebuild cache
+                $rebuild = $this->buildCache($modx);
+                
+                if($rebuild){
+                    $requires_rebuild = $this->storageEngine->init();
+                    if($requires_rebuild)throw new Exception("Could not initialize $this->engine cache.");
+                } else {
+                    throw new Exception("Could not rebuild $this->engine cache on initialization.");
+                }
+            }
+            
             $this->initialized = true;
         }
     }
@@ -169,7 +185,7 @@ class synccache{
         $this->storageEngine->emptyCache();
         $report = $this->deletePageCache();
         $this->buildCache($modx);
-        $nextevent = $this->getNextPublishTime($modx);
+        $nextevent = $this->calculateNextPublishTime($modx);
         $this->storeNextPublishTime($nextevent);
 
         // finished cache stuff.
@@ -271,7 +287,7 @@ class synccache{
      * @param type $modx
      * @return int
      */
-    private function getNextPublishTime($modx){
+    private function calculateNextPublishTime($modx){
         // update publish time file
         $timesArr = array();
         $sql = 'SELECT MIN(pub_date) AS minpub FROM '.$modx->getFullTableName('site_content').' WHERE pub_date>'.time();

@@ -26,18 +26,18 @@ class flintstoneStorageEngine  {
     }
     
     /**
-     * Initialize cache - this implementation loads all values on init
-     * @param type $modx
-     * @throws Exception
+     * Initialize cache
+     * @return boolean is cache rebuild required
      */
-    public function init($modx) {
+    public function init() {
         $this->initStorage();
+        
         if (count($this->storage->load('config')->getKeys()) > 0) {
-            $init = true;
+            $requires_cache_rebuild = false;
         } else {
-            $init = $modx->cacheManager->buildCache($modx);
+            $requires_cache_rebuild = true;
         }
-        if(!$init)throw new Exception('Could not initialize flintstone cache.');
+        return $requires_cache_rebuild;
     }
     
     /*
@@ -223,11 +223,8 @@ class flintstoneStorageEngine  {
         * key can only contain A-Za-z0-9_
         */
         
-        // Check key length
-        $len = strlen($key);
-
         // Check valid characters in key
-        if ($len > 50 || !preg_match("/^([A-Za-z0-9_]+)$/", $key)) {
+        if (strlen($key) > 50 || !preg_match("/^([A-Za-z0-9_]+)$/", $key)) {
             //key is invalid - create a valid one
             $md5 = md5($key);
             

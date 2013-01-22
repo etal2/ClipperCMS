@@ -726,6 +726,8 @@ class DocumentParser {
         $out= str_replace("[^p^]", $phpTime, $out);
         $out= str_replace("[^t^]", $totalTime, $out);
         $out= str_replace("[^s^]", $source, $out);
+        $out= str_replace("[^m^]", intval(memory_get_peak_usage() / 1024)."k", $out);
+        
         //$this->documentOutput= $out;
 
         // invoke OnWebPagePrerender event

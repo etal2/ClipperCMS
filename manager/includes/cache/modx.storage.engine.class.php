@@ -92,21 +92,17 @@ class modxStorageEngine  {
     
     /**
      * Initialize cache - this implementation loads all values on init
-     * @param type $modx
-     * @throws Exception
+     * @return boolean is cache rebuild required
      */
-    public function init($modx) {
+    public function init() {
         if ($included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
             $included= include_once (MODX_BASE_PATH . 'assets/cache/siteCache.idx.php');
         }
         if (!$included || !is_array($this->config) || empty ($this->config)) {
-            $rebuilt = $modx->cacheManager->buildCache($modx);
-            $included = false;
-            if($rebuilt && $included= file_exists(MODX_BASE_PATH . 'assets/cache/siteCache.idx.php')) {
-                $included= include MODX_BASE_PATH . 'assets/cache/siteCache.idx.php';
-            }
+            $requires_cache_rebuild = true;
+        } else {
+            $requires_cache_rebuild = false;
         }
-        if(!$included)throw new Exception('Could not initialize modx cache.');
     }
     
      /*
