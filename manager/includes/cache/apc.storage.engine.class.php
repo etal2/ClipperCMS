@@ -144,39 +144,39 @@ class apcStorageEngine  {
         $this->tmpChildMap = array();
     }
     
-    public function storeConfigSetting($key, $value){
+    public function buildConfigSetting($key, $value){
         $this->tmpConfig[$key]=$value;
     }
     
-    public function storeDocumentListing($alias, $id){
+    public function buildDocumentListing($alias, $id){
         apc_store('document_listings/'.$alias, $id);
     }
     
-    public function storeAliasListing($id, $al){
+    public function buildAliasListing($id, $al){
         apc_store('alias_listings/'.$id, $al);
     }
     
-    public function storeChildMap($parent, $child){
+    public function buildChildMap($parent, $child){
         $this->tmpChildMap[$parent][]= $child;
     }
     
-    public function storeContentType($id, $contentType){
+    public function buildContentType($id, $contentType){
         apc_store('content_types/'.$id, $contentType);
     }
     
-    public function storeChunk($name, $content){
+    public function buildChunk($name, $content){
         apc_store('chunks/'.$name, $content);
     }
     
-    public function storeSnippet($name,$snippet){
+    public function buildSnippet($name,$snippet){
         apc_store('snippets/'.$name, $snippet);
     }
     
-    public function storePlugin($name,$plugin){
+    public function buildPlugin($name,$plugin){
         apc_store('plugins/'.$name, $plugin);
     }
     
-    public function storePluginEvents($evtname, $pluginnames){
+    public function buildPluginEvents($evtname, $pluginnames){
         $this->tmpPluginEvents[$evtname]= $pluginnames;
     }
     

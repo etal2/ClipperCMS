@@ -220,40 +220,40 @@ class modxStorageEngine  {
         $this->tmpPHP .= '$e = &$this->pluginEvent;' . "\n";
     }
     
-    public function storeConfigSetting($key, $value){
+    public function buildConfigSetting($key, $value){
         $this->tmpPHP .= '$g[\''.$key.'\']'.' = "'.$this->escapeDoubleQuotes($value)."\";\n";
     }
     
-    public function storeDocumentListing($alias, $id){
+    public function buildDocumentListing($alias, $id){
         $this->tmpPHP .= '$d[\''.$alias.'\']'." = ".$id.";\n";
     }
     
-    public function storeAliasListing($id, $al){
+    public function buildAliasListing($id, $al){
         $this->tmpPHP .= '$a[' . $id . ']'." = array('id' => ".$al['id'].", 'alias' => '".$al['alias']."', 'path' => '" . $al['path']."', 'parent' => " . $al['parent']. ");\n";
     }
     
-    public function storeChildMap($parent, $child){
+    public function buildChildMap($parent, $child){
         $this->tmpPHP .= '$m[]'." = array('".$parent."' => '".$child."');\n";
         $this->tmpPHP .= '$x[' . $parent . '][]='.$child.";\n";
     }
     
-    public function storeContentType($id, $contentType){
+    public function buildContentType($id, $contentType){
         $this->tmpPHP .= '$t['.$id.']'." = '".$contentType."';\n";
     }
     
-    public function storeChunk($name, $content){
+    public function buildChunk($name, $content){
         $this->tmpPHP .= '$c[\''.$name.'\']'." = '".$this->escapeSingleQuotes($content)."';\n";
     }
     
-    public function storeSnippet($name,$snippet){
+    public function buildSnippet($name,$snippet){
         $this->tmpPHP .= '$s[\''.$name.'\']'." = '".$this->escapeSingleQuotes($snippet)."';\n";
     }
     
-    public function storePlugin($name,$plugin){
+    public function buildPlugin($name,$plugin){
         $this->tmpPHP .= '$p[\''.$name.'\']'." = '".$this->escapeSingleQuotes($plugin)."';\n";
     }
     
-    public function storePluginEvents($evtname, $pluginnames){
+    public function buildPluginEvents($evtname, $pluginnames){
         $this->tmpPHP .= '$e[\''.$evtname.'\'] = array(\''.implode("','",$this->escapeSingleQuotes($pluginnames))."');\n";
     }
     

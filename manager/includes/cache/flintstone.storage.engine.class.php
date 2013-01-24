@@ -162,39 +162,39 @@ class flintstoneStorageEngine  {
         $this->tmpChildMap = array();
     }
     
-    public function storeConfigSetting($key, $value){
+    public function buildConfigSetting($key, $value){
         $this->tmpConfig[$key]=$value;
     }
     
-    public function storeDocumentListing($alias, $id){
+    public function buildDocumentListing($alias, $id){
         $this->storage->load('document_listings')->set($this->makeKeyValid($alias), $id);
     }
     
-    public function storeAliasListing($id, $al){
+    public function buildAliasListing($id, $al){
         $this->storage->load('alias_listings')->set($this->makeKeyValid($id), $al);
     }
     
-    public function storeChildMap($parent, $child){
+    public function buildChildMap($parent, $child){
         $this->tmpChildMap[$parent][]= $child;
     }
     
-    public function storeContentType($id, $contentType){
+    public function buildContentType($id, $contentType){
         $this->storage->load('content_types')->set($this->makeKeyValid($id), $contentType);
     }
     
-    public function storeChunk($name, $content){
+    public function buildChunk($name, $content){
         $this->storage->load('chunks')->set($this->makeKeyValid($name), $content);
     }
     
-    public function storeSnippet($name,$snippet){
+    public function buildSnippet($name,$snippet){
         $this->storage->load('snippets')->set($this->makeKeyValid($name), $snippet);
     }
     
-    public function storePlugin($name,$plugin){
+    public function buildPlugin($name,$plugin){
         $this->storage->load('plugins')->set($this->makeKeyValid($name), $plugin);
     }
     
-    public function storePluginEvents($evtname, $pluginnames){
+    public function buildPluginEvents($evtname, $pluginnames){
         $this->tmpPluginEvents[$evtname]= $pluginnames;
     }
     

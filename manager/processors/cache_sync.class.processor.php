@@ -340,7 +340,7 @@ class synccache{
         $config = array();
         
         while(list($key,$value) = $modx->db->getRow($rs,'num')) {
-            $this->storageEngine->storeConfigSetting($key, $value);
+            $this->storageEngine->buildConfigSetting($key, $value);
             $config[$key] = $value;
         }
 
@@ -355,13 +355,13 @@ class synccache{
                 $tmpPath = $this->getParents($tmp1['parent']);
                 $alias= (strlen($tmpPath) > 0 ? "$tmpPath/" : '').$tmp1['alias'];
                 $alias= $modx->db->escape($alias);
-                $this->storageEngine->storeDocumentListing($alias, $tmp1['id']);
+                $this->storageEngine->buildDocumentListing($alias, $tmp1['id']);
             }
             else {
-                $this->storageEngine->storeDocumentListing($modx->db->escape($alias), $tmp1['id']);
+                $this->storageEngine->buildDocumentListing($modx->db->escape($alias), $tmp1['id']);
             }
-            $this->storageEngine->storeAliasListing($tmp1['id'], array('id' => $tmp1['id'], 'alias' => $modx->db->escape($tmp1['alias']), 'path' => $modx->db->escape($tmpPath), 'parent' => $tmp1['parent']));
-            $this->storageEngine->storeChildMap($tmp1['parent'],$tmp1['id']);
+            $this->storageEngine->buildAliasListing($tmp1['id'], array('id' => $tmp1['id'], 'alias' => $modx->db->escape($tmp1['alias']), 'path' => $modx->db->escape($tmpPath), 'parent' => $tmp1['parent']));
+            $this->storageEngine->buildChildMap($tmp1['parent'],$tmp1['id']);
         }
 
 
@@ -371,7 +371,7 @@ class synccache{
         $limit_tmp = $modx->db->getRecordCount($rs);
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $this->storageEngine->storeContentType($tmp1['id'], $tmp1['contentType']);
+           $this->storageEngine->buildContentType($tmp1['id'], $tmp1['contentType']);
         }
 
         // WRITE Chunks to cache file
@@ -380,7 +380,7 @@ class synccache{
         $limit_tmp = $modx->db->getRecordCount($rs);
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $this->storageEngine->storeChunk($modx->db->escape($tmp1['name']), $tmp1['snippet']);
+           $this->storageEngine->buildChunk($modx->db->escape($tmp1['name']), $tmp1['snippet']);
         }
 
         // WRITE snippets to cache file
@@ -391,9 +391,9 @@ class synccache{
         $limit_tmp = $modx->db->getRecordCount($rs);
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $this->storageEngine->storeSnippet($modx->db->escape($tmp1['name']),$tmp1['snippet']);
+           $this->storageEngine->buildSnippet($modx->db->escape($tmp1['name']),$tmp1['snippet']);
            // Raymond: save snippet properties to cache
-           if ($tmp1['properties']!=""||$tmp1['sharedproperties']!="") $this->storageEngine->storeSnippet($tmp1['name'].'Props', $tmp1['properties']." ".$tmp1['sharedproperties']);
+           if ($tmp1['properties']!=""||$tmp1['sharedproperties']!="") $this->storageEngine->buildSnippet($tmp1['name'].'Props', $tmp1['properties']." ".$tmp1['sharedproperties']);
             // End mod
         }
 
@@ -406,8 +406,8 @@ class synccache{
         $limit_tmp = $modx->db->getRecordCount($rs);
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
            $tmp1 = $modx->db->getRow($rs);
-           $this->storageEngine->storePlugin($modx->db->escape($tmp1['name']), $tmp1['plugincode']);
-           if ($tmp1['properties']!=''||$tmp1['sharedproperties']!='') $this->storageEngine->storePlugin($tmp1['name'].'Props', $tmp1['properties'].' '.$tmp1['sharedproperties']);
+           $this->storageEngine->buildPlugin($modx->db->escape($tmp1['name']), $tmp1['plugincode']);
+           if ($tmp1['properties']!=''||$tmp1['sharedproperties']!='') $this->storageEngine->buildPlugin($tmp1['name'].'Props', $tmp1['properties'].' '.$tmp1['sharedproperties']);
         }
 
 
@@ -427,7 +427,7 @@ class synccache{
             $events[$evt['evtname']][] = $evt['name'];
         }
         foreach($events as $evtname => $pluginnames) {
-            $this->storageEngine->storePluginEvents($evtname, $pluginnames);
+            $this->storageEngine->buildPluginEvents($evtname, $pluginnames);
         }
 
         // invoke OnBeforeCacheUpdate event
