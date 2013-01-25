@@ -6,7 +6,8 @@
  * 
  * @author etal
  */
-class modxStorageEngine  {
+@ include_once MODX_BASE_PATH . '/manager/includes/cache/storage.engine.interface.php';
+class modxStorageEngine implements iStorageEngine {
     
     private $cachePath;
     private $showReport = false;
@@ -69,8 +70,9 @@ class modxStorageEngine  {
      * Array of all documents
      * No Key
      * Values are arrays of parentId => childId
+     * removed - cannot be optimized
      */
-    private $documentMap;
+    //private $documentMap;
     
     /*
      * Array of all documents
@@ -210,7 +212,7 @@ class modxStorageEngine  {
         $this->tmpPHP .= '$this->aliasListing = array();' . "\n";
         $this->tmpPHP .= '$a = &$this->aliasListing;' . "\n";
         $this->tmpPHP .= '$d = &$this->documentListing;' . "\n";
-        $this->tmpPHP .= '$m = &$this->documentMap;' . "\n";
+        //$this->tmpPHP .= '$m = &$this->documentMap;' . "\n";
         $this->tmpPHP .= '$x = &$this->childMap;' . "\n";
         $this->tmpPHP .= '$t = &$this->contentTypes;' . "\n";
         $this->tmpPHP .= '$c = &$this->chunkCache;' . "\n";
@@ -232,7 +234,7 @@ class modxStorageEngine  {
     }
     
     public function buildChildMap($parent, $child){
-        $this->tmpPHP .= '$m[]'." = array('".$parent."' => '".$child."');\n";
+       // $this->tmpPHP .= '$m[]'." = array('".$parent."' => '".$child."');\n";
         $this->tmpPHP .= '$x[' . $parent . '][]='.$child.";\n";
     }
     

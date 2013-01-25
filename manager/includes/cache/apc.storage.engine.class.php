@@ -6,8 +6,8 @@
  * 
  * @author etal
  */
-
-class apcStorageEngine  {
+@ include_once MODX_BASE_PATH . '/manager/includes/cache/storage.engine.interface.php';
+class apcStorageEngine implements iStorageEngine {
     
     private $cachePath;
     private $showReport = false;

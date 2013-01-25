@@ -1,6 +1,5 @@
 <?php
 // cache & synchronize class
-
 class synccache{
     var $cachePath;
     var $showReport;
@@ -12,13 +11,13 @@ class synccache{
     
     private $storageEngine = null;
     
-    private $engine = 'modx';
-    //private $engine = 'apc';
+    //private $engine = 'modx';
+    private $engine = 'apc';
     
     function __construct() {
         if(!isset($this->engine)){
             //fallback to default engine
-            $this->engine = 'flintstone';
+            $this->engine = 'btree';
         }
         
         $engine = $this->engine;
