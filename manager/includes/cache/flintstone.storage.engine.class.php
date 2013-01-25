@@ -45,6 +45,21 @@ class flintstoneStorageEngine  {
         $this->storage = new Flintstone(array('dir' => $this->cachePath));
     }
     
+    /**
+     * Store next publish time
+     * @param type $nextevent
+     */
+    public function setNextPublishTime($nextevent){
+        $this->storage->load('config')->set('next_publish_time', $nextevent);
+    }
+    
+    /**
+     * returns next publish time
+     */
+    public function getNextPublishTime(){
+        return $this->storage->load('config')->get('next_publish_time');
+    }
+    
      /*
      * returns an array of various config settings
      */

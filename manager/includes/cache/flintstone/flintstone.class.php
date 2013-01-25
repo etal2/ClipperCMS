@@ -191,7 +191,7 @@ class Flintstone {
 					}
 					
 					// Unserialize data
-					$data = $this->unserialize($data);
+					$data = unserialize($data);
 					
 					// Preserve new lines
 					$data = $this->preserveLines($data, true);

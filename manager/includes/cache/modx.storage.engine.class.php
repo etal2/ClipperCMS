@@ -3,7 +3,6 @@
 /**
  * modx storage engine - filesystem based storage engine
  * based on the original modx cache implementation.
- * not very fast, scales badly but supports extra compatibility bits
  * 
  * @author etal
  */
@@ -273,6 +272,42 @@ class modxStorageEngine  {
            echo 'Cannot write main cache file! Make sure the assets/cache directory is writable!';
            exit;
         }
+        fclose($handle);
+    }
+    
+    /**
+     * return next publish time
+     */
+    public function getNextPublishTime(){
+        $cacheRefreshTime = 0;
+        @include $this->cachePath.'/sitePublishing.idx.php';
+        return $cacheRefreshTime;
+    }
+    
+    /**
+     * Store next publish time
+     * @param type $nextevent
+     */
+    public function setNextPublishTime($nextevent){
+        // write the file
+        $filename = $this->cachePath.'/sitePublishing.idx.php';
+        $somecontent = '<?php $cacheRefreshTime='.$nextevent.'; ?>';
+
+        if (!$handle = fopen($filename, 'w')) {
+             echo 'Cannot open file ('.$filename.')';
+             exit;
+        }
+
+        flock($handle, LOCK_EX);
+        
+        // Write $somecontent to our opened file.
+        if (fwrite($handle, $somecontent) === FALSE) {
+           echo 'Cannot write publishing info file! Make sure the assets/cache directory is writable!';
+           exit;
+        }
+
+        flock($handle, LOCK_UN);
+        
         fclose($handle);
     }
     

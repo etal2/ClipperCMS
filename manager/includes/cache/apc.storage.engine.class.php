@@ -1,8 +1,8 @@
 <?php
 
 /**
- * apc storage engine - apc memory cache based storage engine
- * very fast, requires apc installed
+ * apc storage engine - apc shared memory cache based storage engine
+ * requires apc installed
  * 
  * @author etal
  */
@@ -35,6 +35,21 @@ class apcStorageEngine  {
             $requires_cache_rebuild = true;
         }
         return $requires_cache_rebuild;
+    }
+    
+    /**
+     * Store next publish time
+     * @param type $nextevent
+     */
+    public function setNextPublishTime($nextevent){
+        apc_store('next_publish_time', $nextevent);
+    }
+    
+    /**
+     * returns next publish time
+     */
+    public function getNextPublishTime(){
+        return apc_fetch('next_publish_time');
     }
     
      /*

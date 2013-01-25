@@ -743,8 +743,7 @@ class DocumentParser {
      * Checks the publish state of page
      */
     function checkPublishStatus() {
-        $cacheRefreshTime= 0;
-        @include $this->config["base_path"] . "assets/cache/sitePublishing.idx.php";
+        $cacheRefreshTime= $this->cacheManager->getNextPublishTime();
         $timeNow= time() + $this->config['server_offset_time'];
         if ($cacheRefreshTime <= $timeNow && $cacheRefreshTime != 0) {
             // now, check for documents that need publishing
@@ -759,59 +758,11 @@ class DocumentParser {
                 $this->messageQuit("Execution of a query to the database failed", $sql);
             }
 
-            // clear the cache
-            $basepath= $this->config["base_path"] . "assets/cache/";
-            if ($handle= opendir($basepath)) {
-                $filesincache= 0;
-                $deletedfilesincache= 0;
-                while (false !== ($file= readdir($handle))) {
-                    if ($file != "." && $file != "..") {
-                        $filesincache += 1;
-                        if (preg_match("/\.pageCache/", $file)) {
-                            $deletedfilesincache += 1;
-                            while (!unlink($basepath . "/" . $file));
-                        }
-                    }
-                }
-                closedir($handle);
-            }
-
-            // update publish time file
-            $timesArr= array ();
-            $sql= "SELECT MIN(pub_date) AS minpub FROM " . $this->getFullTableName("site_content") . " WHERE pub_date>$timeNow";
-            if (@ !$result= $this->db->query($sql)) {
-                $this->messageQuit("Failed to find publishing timestamps", $sql);
-            }
-            $tmpRow= $this->db->getRow($result);
-            $minpub= $tmpRow['minpub'];
-            if ($minpub != NULL) {
-                $timesArr[]= $minpub;
-            }
-
-            $sql= "SELECT MIN(unpub_date) AS minunpub FROM " . $this->getFullTableName("site_content") . " WHERE unpub_date>$timeNow";
-            if (@ !$result= $this->db->query($sql)) {
-                $this->messageQuit("Failed to find publishing timestamps", $sql);
-            }
-            $tmpRow= $this->db->getRow($result);
-            $minunpub= $tmpRow['minunpub'];
-            if ($minunpub != NULL) {
-                $timesArr[]= $minunpub;
-            }
-
-            if (count($timesArr) > 0) {
-                $nextevent= min($timesArr);
-            } else {
-                $nextevent= 0;
-            }
-
-            $basepath= $this->config["base_path"] . "assets/cache";
-            $fp= @ fopen($basepath . "/sitePublishing.idx.php", "wb");
-            if ($fp) {
-                @ flock($fp, LOCK_EX);
-                @ fwrite($fp, "<?php \$cacheRefreshTime=$nextevent; ?>");
-                @ flock($fp, LOCK_UN);
-                @ fclose($fp);
-            }
+            // clear the documents cache
+            $this->cacheManager->emptyPageCache();
+           
+            // calculate and set the next publish event time
+            $this->cacheManager->setNextPublishTime($this);
         }
     }
 

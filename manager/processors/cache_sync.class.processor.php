@@ -12,7 +12,7 @@ class synccache{
     
     private $storageEngine = null;
     
-    //private $engine = 'modx';
+    private $engine = 'modx';
     //private $engine = 'apc';
     
     function __construct() {
@@ -83,6 +83,16 @@ class synccache{
             
             $this->initialized = true;
         }
+    }
+    
+    public function getNextPublishTime(){
+        $time = $this->storageEngine->getNextPublishTime();
+        return intval($time);
+    }
+    
+    public function setNextPublishTime($modx){
+        $nextevent = $this->calculateNextPublishTime($modx);
+        $this->storageEngine->setNextPublishTime($nextevent);
     }
     
     /*
@@ -184,10 +194,9 @@ class synccache{
             $modx = $GLOBALS['modx'];
         }
         $this->storageEngine->emptyCache();
-        $report = $this->deletePageCache();
+        $report = $this->emptyPageCache();
         $this->buildCache($modx);
-        $nextevent = $this->calculateNextPublishTime($modx);
-        $this->storeNextPublishTime($nextevent);
+        $this->setNextPublishTime($modx);
 
         // finished cache stuff.
         if($this->showReport==true) {
@@ -203,10 +212,8 @@ class synccache{
             }
         }
     }
-
-    private $deletedfiles = array();
     
-    private function deletePageCache() {
+    public function emptyPageCache() {
         if(!isset($this->cachePath)) {
             echo "Cache path not set.";
             exit;
@@ -257,30 +264,6 @@ class synccache{
             deletedfiles => $deletedfiles);
         
         return $report;
-    }
-    
-    /**
-     * Store next publish time
-     * should be moved into storage engine later
-     * @param type $nextevent
-     */
-    private function storeNextPublishTime($nextevent){
-        // write the file
-        $filename = $this->cachePath.'/sitePublishing.idx.php';
-        $somecontent = '<?php $cacheRefreshTime='.$nextevent.'; ?>';
-
-        if (!$handle = fopen($filename, 'w')) {
-             echo 'Cannot open file ('.$filename.')';
-             exit;
-        }
-
-        // Write $somecontent to our opened file.
-        if (fwrite($handle, $somecontent) === FALSE) {
-           echo 'Cannot write publishing info file! Make sure the assets/cache directory is writable!';
-           exit;
-        }
-
-        fclose($handle);
     }
     
     /**
@@ -351,19 +334,15 @@ class synccache{
         $limit_tmp = $modx->db->getRecordCount($rs);
         for ($i_tmp=0; $i_tmp<$limit_tmp; $i_tmp++) {
             $tmp1 = $modx->db->getRow($rs);
+            $alias= $tmp1['alias'];
             if ($config['friendly_urls'] == 1 && $config['use_alias_path'] == 1) {
                 $tmpPath = $this->getParents($tmp1['parent']);
-                $alias= (strlen($tmpPath) > 0 ? "$tmpPath/" : '').$tmp1['alias'];
-                $alias= $modx->db->escape($alias);
-                $this->storageEngine->buildDocumentListing($alias, $tmp1['id']);
+                $alias= (strlen($tmpPath) > 0 ? "$tmpPath/" : '').$alias;   
             }
-            else {
-                $this->storageEngine->buildDocumentListing($modx->db->escape($alias), $tmp1['id']);
-            }
+            $this->storageEngine->buildDocumentListing($modx->db->escape($alias), $tmp1['id']);
             $this->storageEngine->buildAliasListing($tmp1['id'], array('id' => $tmp1['id'], 'alias' => $modx->db->escape($tmp1['alias']), 'path' => $modx->db->escape($tmpPath), 'parent' => $tmp1['parent']));
             $this->storageEngine->buildChildMap($tmp1['parent'],$tmp1['id']);
         }
-
 
         // get content types
         $sql = 'SELECT id, contentType FROM '.$modx->getFullTableName('site_content')." WHERE contentType != 'text/html'";
@@ -431,12 +410,12 @@ class synccache{
         }
 
         // invoke OnBeforeCacheUpdate event
-        if ($modx) $modx->invokeEvent('OnBeforeCacheUpdate');
+        $modx->invokeEvent('OnBeforeCacheUpdate');
 
         $this->storageEngine->finalizeCacheBuild();
 
         // invoke OnCacheUpdate event
-        if ($modx) $modx->invokeEvent('OnCacheUpdate');
+        $modx->invokeEvent('OnCacheUpdate');
 
         return true;
     }
