@@ -11,13 +11,15 @@ class synccache{
     
     private $storageEngine = null;
     
-    //private $engine = 'modx';
-    private $engine = 'apc';
+    //private $engine = 'btree';
+    //private $engine = 'apc';
+    //private $engine = 'sqlite';
+    private $engine = 'hash';
     
     function __construct() {
         if(!isset($this->engine)){
             //fallback to default engine
-            $this->engine = 'btree';
+            $this->engine = 'modx';
         }
         
         $engine = $this->engine;

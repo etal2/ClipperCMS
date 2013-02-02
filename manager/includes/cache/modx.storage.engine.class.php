@@ -102,6 +102,7 @@ class modxStorageEngine implements iStorageEngine {
         } else {
             $requires_cache_rebuild = false;
         }
+        return $requires_cache_rebuild;
     }
     
      /*
