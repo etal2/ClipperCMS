@@ -216,7 +216,7 @@ class hashStorageEngine implements iStorageEngine {
     private function _getDocumentListing($documentIdentifier){
         if(!array_key_exists($documentIdentifier, $this->documentListing)){
             $d = &$this->documentListing;
-            @include_once $this->cachePath.'documentListing.'.$this->hashVal($documentIdentifier).'.idx.php';
+            @include_once $this->cachePath.'documentListing.'.$this->hashValString($documentIdentifier).'.idx.php';
         }
         return $this->documentListing[$documentIdentifier];
     }
@@ -237,9 +237,15 @@ class hashStorageEngine implements iStorageEngine {
     }
     
     private function hashVal($key){
+        return $key >> 7; //divide by 128
+    }
+    
+    
+    private function hashValString($key){
         $val = substr(MD5($key), -1); //take last char
         return $val;
     }
+    
     
     private $configPHP;
     private $aliasListingPHP;
@@ -272,7 +278,7 @@ class hashStorageEngine implements iStorageEngine {
     }
     
     public function buildDocumentListing($alias, $id){
-        $this->documentListingPHP[$this->hashVal($alias)][] = '$d[\''.$alias.'\']'." = ".$id.";\n";
+        $this->documentListingPHP[$this->hashValString($alias)][] = '$d[\''.$alias.'\']'." = ".$id.";\n";
     }
     
     public function buildAliasListing($id, $al){
@@ -280,9 +286,7 @@ class hashStorageEngine implements iStorageEngine {
     }
     
     public function buildChildMap($parent, $child){
-        // $this->tmpPHP .= '$m[]'." = array('".$parent."' => '".$child."');\n";
         $this->tmpChildMap[$parent][]= $child;
-        //$this->tmpPHP .= '$x[' . $parent . '][]='.$child.";\n";
     }
     
     public function buildContentType($id, $contentType){
