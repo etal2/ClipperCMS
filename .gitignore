@@ -22,3 +22,4 @@ manager/includes/config.inc.php
 
 # and do not ignore index.html
 !index.html
+/nbproject/
